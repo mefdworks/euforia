@@ -301,3 +301,7 @@ details[open] .chev{transform:rotate(90deg)}
 .seg2 button{padding:10px;border-radius:10px;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:1px;text-transform:uppercase;font-size:.85rem;color:var(--muted)}
 .seg2 button.on{background:var(--text);color:var(--bg)}
 .ring-card .detail{grid-column:1/-1;display:flex;justify-content:space-between;align-items:center;padding-top:12px;border-top:1px solid var(--line);color:var(--red2);font-weight:600;font-size:.88rem}
+
+/* Autocompletado del navegador: mantener el fondo oscuro */
+.inp:-webkit-autofill,.inp:-webkit-autofill:hover,.inp:-webkit-autofill:focus{-webkit-text-fill-color:var(--text);-webkit-box-shadow:0 0 0 1000px var(--bg) inset;box-shadow:0 0 0 1000px var(--bg) inset;caret-color:var(--text);transition:background-color 9999s}
+.inp:autofill{background:transparent}

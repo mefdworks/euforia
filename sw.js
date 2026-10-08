@@ -1,8 +1,8 @@
 // Euforia — service worker: abre rápido y sin señal.
 // Páginas: red primero (siempre lo último publicado). Estáticos: caché y se refrescan por detrás.
 // La API de Apps Script y otros dominios no pasan por aquí.
-const CACHE = 'euforia-v5.1';
-const SHELL = ['./', 'index.html', 'assets/euforia.css', 'assets/stats.js', 'assets/logo-euforia.webp',
+const CACHE = 'euforia-v5.2';
+const SHELL = ['./', 'index.html', 'assets/euforia.css', 'assets/stats.js', 'bienestar.html', 'assets/logo-euforia.webp',
                'assets/fotos/welcome.jpg', 'assets/fotos/home.jpg', 'assets/icons/favicon.png'];
 
 self.addEventListener('install', e => {

@@ -1,5 +1,7 @@
 // ══════════════════════════════════════════════════════════════
-// EUFORIA PORTAL — Apps Script API v5.1 (getPortal devuelve statsName, col E de USUARIOS)
+// EUFORIA PORTAL — Apps Script API v5.2
+//   v5.1: getPortal devuelve statsName (col E de USUARIOS)
+//   v5.2: bienestar con token (el nombre sale de la sesión) + historial propio
 // Cambios frente a v4:
 //   · Caché de hojas (CacheService) → menos lecturas, menos timeouts
 //   · getPortal: jugador + presupuesto en UNA sola ejecución, con token
@@ -21,7 +23,7 @@ const CFG = {
 const SH = { USERS: 'USUARIOS', SEG: 'SEGUIMIENTO', PRES: 'PRESUPUESTO', BIEN: 'BIENESTAR' };
 
 const ROUTES = {
-  ping:            p => ({ ok: true, message: 'Euforia API v5.1 ✓' }),
+  ping:            p => ({ ok: true, message: 'Euforia API v5.2 ✓' }),
   isFirstTime:     p => isFirstTime(p.codigo),
   register:        p => register(p.codigo, p.password),
   login:           p => login(p.codigo, p.password),
@@ -33,6 +35,7 @@ const ROUTES = {
   getPresupuesto:  p => getPresupuesto(),
   getJugadores:    p => getJugadores(),
   submitBienestar: p => submitBienestar(p),
+  getMiBienestar:  p => getMiBienestar(p.token),
 };
 
 function doGet(e) {
@@ -333,8 +336,16 @@ function getJugadores() {
   return { ok: true, jugadores };
 }
 
+// Con token (portal nuevo) el nombre sale de la sesión; sin token se acepta
+// p.nombre para no romper el formulario anterior mientras se migra.
 function submitBienestar(p) {
-  if (!p.nombre || !p.fecha) return { ok: false, error: 'Faltan parámetros: nombre o fecha' };
+  let nombre = p.nombre;
+  if (p.token) {
+    const u = userFromToken_(p.token);
+    if (!u) return { ok: false, auth: false, error: 'Tu sesión venció, ingresa de nuevo.' };
+    nombre = u.nombre;
+  }
+  if (!nombre || !p.fecha) return { ok: false, error: 'Faltan parámetros: nombre o fecha' };
 
   const headers = [
     'Timestamp', 'Fecha', 'Jugador', 'Tipo de sesión', 'Horas de sueño',
@@ -345,7 +356,7 @@ function submitBienestar(p) {
   // Índice = Fatiga + Daño muscular + Estrés + Ánimo (4–20, más alto = mejor)
   const indice = Number(p.fatiga) + Number(p.dano_muscular) + Number(p.estres) + Number(p.animo);
 
-  return withLock_(() => {
+  const res = withLock_(() => {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     let sheet = ss.getSheetByName(SH.BIEN);
     if (!sheet) {
@@ -354,10 +365,41 @@ function submitBienestar(p) {
       sheet.setFrozenRows(1);
     }
     sheet.appendRow([
-      new Date(), p.fecha, p.nombre, p.tipo_sesion || '', p.horas_sueno || '',
+      new Date(), p.fecha, nombre, p.tipo_sesion || '', p.horas_sueno || '',
       p.calidad_sueno || '', p.fatiga || '', p.dano_muscular || '', p.estres || '',
       p.animo || '', p.rpe || '', indice, p.comentarios || ''
     ]);
+    CacheService.getScriptCache().remove('rows_' + SH.BIEN);
     return { ok: true, indice };
   });
+  if (res.ok && p.token) res.hist = bienestarHist_(nombre);
+  return res;
+}
+
+function getMiBienestar(token) {
+  const u = userFromToken_(token);
+  if (!u) return { ok: false, auth: false, error: 'Tu sesión venció, ingresa de nuevo.' };
+  return { ok: true, nombre: u.nombre, hist: bienestarHist_(u.nombre) };
+}
+
+function userFromToken_(token) {
+  const codigo = readToken_(token);
+  const u = codigo && findUser_(codigo);
+  return u && u.activo ? u : null;
+}
+
+// Últimos 30 registros del jugador, del más viejo al más reciente
+function bienestarHist_(nombre) {
+  let data;
+  try { data = rows_(SH.BIEN); } catch (_) { return []; }
+  const target = str_(nombre).toLowerCase();
+  return data.slice(1)
+    .filter(r => str_(r[2]).toLowerCase() === target)
+    .map(r => ({
+      fecha: str_(r[1]).slice(0, 10), indice: Number(r[11]) || 0, sueno: Number(r[4]) || 0,
+      calidad: Number(r[5]) || 0, fatiga: Number(r[6]) || 0, dano: Number(r[7]) || 0,
+      estres: Number(r[8]) || 0, animo: Number(r[9]) || 0, rpe: Number(r[10]) || 0, ts: str_(r[0])
+    }))
+    .sort((a, b) => (a.fecha + a.ts).localeCompare(b.fecha + b.ts))
+    .slice(-30);
 }

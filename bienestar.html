@@ -2,305 +2,234 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>Euforia — Control de Bienestar</title>
-<link rel="icon" type="image/png" href="https://euforiaultimate.com/wp-content/uploads/2024/01/cropped-favicon-euforia-32x32.png">
-<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@300;400;500;600&display=swap" rel="stylesheet">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Euforia · Bienestar</title>
+<meta name="theme-color" content="#0b0b0c">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="assets/icons/favicon.png">
+<link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800;900&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/euforia.css">
 <style>
-:root{--red:#c0272d;--red2:#e03035;--black:#0f0f0f;--black2:#161616;--black3:#1a1a1a;--card:#1e1e1e;--card2:#252525;--border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.12);--text:#fff;--muted:rgba(255,255,255,0.45);--muted2:rgba(255,255,255,0.18);--green:#22a050;--green-bg:rgba(34,160,80,0.12);--green-border:rgba(34,160,80,0.3);--orange:#d97706;}
-*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-html,body{width:100%;min-height:100vh;background:var(--black);color:var(--text);font-family:'Barlow',sans-serif;overflow-x:hidden}
-body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 80% 60% at 50% -10%,rgba(192,39,45,0.18) 0%,transparent 65%),radial-gradient(ellipse 60% 40% at 100% 100%,rgba(192,39,45,0.08) 0%,transparent 55%);pointer-events:none;z-index:0}
-body::after{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(255,255,255,0.025) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.025) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0}
-@keyframes fadeDown{from{opacity:0;transform:translateY(-12px)}to{opacity:1;transform:none}}
-@keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
-@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(.65)}}
-@keyframes spin{to{transform:rotate(360deg)}}
-@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
-.screen{display:none;position:relative;z-index:10}.screen.active{display:block}
-#s-loading{position:fixed;inset:0;z-index:200;background:var(--black);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px}
-#s-loading.hidden{display:none}
-.spinner{width:30px;height:30px;border:2.5px solid rgba(255,255,255,0.07);border-top-color:var(--red);border-radius:50%;animation:spin .7s linear infinite}
-.loading-txt{font-family:'Barlow Condensed',sans-serif;font-size:.62rem;letter-spacing:3px;text-transform:uppercase;color:var(--muted)}
-.auth-wrap{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:32px 20px 56px}
-.auth-logo{margin-bottom:8px;animation:fadeDown .4s ease both}.auth-logo img{height:52px;object-fit:contain;filter:brightness(1.05)}
-.auth-badge{display:inline-flex;align-items:center;gap:5px;background:rgba(192,39,45,0.12);border:1px solid rgba(192,39,45,0.3);border-radius:20px;padding:4px 13px;font-family:'Barlow Condensed',sans-serif;font-size:.6rem;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:rgba(255,255,255,0.65);margin-bottom:24px;animation:fadeDown .4s .08s ease both}
-.auth-badge::before{content:'';width:5px;height:5px;border-radius:50%;background:var(--red);animation:pulse 2s infinite}
-.auth-title{font-family:'Barlow Condensed',sans-serif;font-size:clamp(2.2rem,8vw,3rem);font-weight:900;line-height:.9;text-align:center;margin-bottom:5px;animation:fadeDown .4s .12s ease both}
-.auth-title span{color:var(--red)}
-.auth-sub{font-size:.72rem;color:var(--muted);letter-spacing:1px;text-align:center;margin-bottom:30px;animation:fadeDown .4s .15s ease both}
-.auth-card{background:var(--card);border:1px solid var(--border2);border-radius:18px;padding:26px 22px;width:100%;max-width:420px;animation:fadeUp .4s .18s ease both;box-shadow:0 24px 48px rgba(0,0,0,0.5)}
-.lbl{font-family:'Barlow Condensed',sans-serif;font-size:.6rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:7px;display:block}
-.inp{width:100%;background:rgba(255,255,255,0.04);border:1.5px solid var(--border2);border-radius:10px;padding:12px 15px;font-family:'Barlow',sans-serif;font-size:.95rem;color:var(--text);outline:none;transition:border-color .2s,background .2s,box-shadow .2s;margin-bottom:14px}
-.inp:focus{border-color:rgba(192,39,45,0.5);background:rgba(192,39,45,0.04);box-shadow:0 0 0 3px rgba(192,39,45,0.08)}
-.inp::placeholder{color:var(--muted2)}
-select.inp{-webkit-appearance:none;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 13px center;background-size:16px}
-textarea.inp{resize:vertical;min-height:64px;padding-top:11px}
-.btn{width:100%;background:var(--red);border:none;border-radius:10px;padding:13px;font-family:'Barlow Condensed',sans-serif;font-size:.95rem;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:#fff;cursor:pointer;transition:background .2s,transform .15s;display:flex;align-items:center;justify-content:center;gap:8px;margin-top:2px;box-shadow:0 4px 16px rgba(192,39,45,0.3)}
-.btn:hover{background:var(--red2)}.btn:active{transform:scale(.98)}
-.btn:disabled{opacity:.5;cursor:default}
-.btn-sp{width:16px;height:16px;border:2px solid rgba(255,255,255,0.25);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite;display:none}
-.err{display:none;background:rgba(192,39,45,0.08);border:1px solid rgba(192,39,45,0.28);border-radius:9px;padding:9px 13px;font-size:.78rem;color:#ff7070;margin-top:11px;text-align:center;line-height:1.4}
-.err.show{display:block;animation:shake .3s ease}
-.form-wrap{width:100%;max-width:420px;animation:fadeUp .4s .18s ease both}
-.sec-lbl{font-family:'Barlow Condensed',sans-serif;font-size:.55rem;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:var(--muted);margin-bottom:9px;padding-left:2px;display:flex;align-items:center;gap:8px}
-.sec-lbl::after{content:'';flex:1;height:1px;background:var(--border)}
-.bq-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px 18px;margin-bottom:12px;width:100%}
-.bq-field{margin-bottom:14px}
-.bq-field:last-child{margin-bottom:0}
-.bq-row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.bq-pillgroup{display:flex;gap:8px;margin-top:6px}
-.bq-pill{flex:1;padding:10px 4px;text-align:center;background:var(--card2);border:1.5px solid var(--border2);border-radius:10px;font-family:'Barlow Condensed',sans-serif;font-size:.72rem;font-weight:700;letter-spacing:.5px;text-transform:uppercase;cursor:pointer;color:var(--muted);user-select:none;transition:all .15s}
-.bq-pill.active{background:var(--red);border-color:var(--red);color:#fff}
-.bq-scale{display:flex;gap:6px;margin-top:8px}
-.bq-scale button{flex:1;aspect-ratio:1/1;border-radius:9px;background:var(--card2);border:1.5px solid var(--border2);color:var(--text);font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:1rem;cursor:pointer;transition:all .15s}
-.bq-scale button.active{background:var(--red);border-color:var(--red);color:#fff;box-shadow:0 4px 14px rgba(192,39,45,0.35)}
-.bq-scale.rpe button{font-size:.8rem}
-.bq-caption{min-height:16px;margin-top:8px;font-size:.68rem;color:var(--red);font-weight:600;text-align:center;letter-spacing:.3px}
-.bq-hint{font-size:.68rem;color:var(--muted);margin-bottom:2px}
-.success-wrap{width:100%;max-width:420px;text-align:center;padding:40px 24px;animation:fadeUp .4s ease both}
-.success-wrap .tick{width:60px;height:60px;border-radius:50%;background:var(--green-bg);border:1.5px solid var(--green-border);color:var(--green);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;font-size:26px}
-.success-wrap h2{font-family:'Barlow Condensed',sans-serif;font-size:1.5rem;font-weight:800;text-transform:uppercase;margin-bottom:6px}
-.success-wrap p{color:var(--muted);font-size:.8rem;line-height:1.5}
-footer{text-align:center;padding:24px 20px 12px;font-size:.58rem;color:var(--muted2);letter-spacing:1px;position:relative;z-index:10}
+body{padding-bottom:110px}
+.wrap{max-width:560px;margin:0 auto;padding:calc(10px + var(--safe-t)) 16px 0}
+.prog{position:sticky;top:0;z-index:20;padding:10px 0 12px;background:linear-gradient(var(--bg) 75%,transparent)}
+.prog .track{height:5px;border-radius:9px;background:var(--s3);overflow:hidden}
+.prog .track i{display:block;height:100%;width:0;border-radius:9px;background:linear-gradient(90deg,var(--red),var(--red2));box-shadow:0 0 10px var(--glow);transition:width .4s}
+.prog small{display:block;color:var(--muted);font-size:.78rem;margin-top:7px}
+.who{display:flex;align-items:center;gap:12px;padding:14px 16px}
+.who .avatar{width:44px;height:44px;flex-shrink:0}
+.who b{display:block;font-family:'Barlow Condensed',sans-serif;font-size:1.15rem;text-transform:uppercase;line-height:1.1}
+.who small{color:var(--muted);font-size:.8rem}
+.dates{display:flex;gap:6px;margin-left:auto;flex-shrink:0;position:relative}
+.dates button{padding:8px 12px;border-radius:99px;background:var(--s2);font-size:.82rem;font-weight:600;color:var(--muted)}
+.dates button.on{background:var(--text);color:var(--bg)}
+.dates input{position:absolute;right:0;bottom:0;opacity:0;pointer-events:none;width:1px;height:1px}
+.q{padding:18px 16px;margin-top:12px}
+.q h4{font-weight:600;font-size:1.02rem}
+.q p{color:var(--muted);font-size:.8rem;margin:3px 0 0}
+.q .head{margin-bottom:12px}
+.q.done h4::after{content:' ✓';color:var(--ok);font-size:.85rem}
+.scale{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+.scale button{height:54px;border-radius:14px;background:var(--s2);border:1px solid var(--line);font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:1.35rem;color:var(--soft);transition:transform .12s}
+.scale button:active{transform:scale(.94)}
+.scale button.on{background:linear-gradient(135deg,var(--red2),var(--red));color:#fff;border-color:transparent;box-shadow:0 8px 20px -8px var(--glow)}
+.ends{display:flex;justify-content:space-between;color:var(--faint);font-size:.74rem;margin-top:8px;gap:10px}
+.ends span:last-child{text-align:right}
+.caption{min-height:20px;margin-top:8px;font-weight:600;font-size:.9rem;color:var(--text);text-align:center}
+.rpe{display:grid;grid-template-columns:repeat(10,1fr);gap:4px}
+.rpe button{height:50px;border-radius:10px;position:relative;overflow:hidden;background:var(--s2);font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:1rem;color:#fff;display:flex;align-items:flex-end;justify-content:center;padding-bottom:5px}
+.rpe button i{position:absolute;left:0;right:0;bottom:0;opacity:.32;transition:opacity .15s}
+.rpe button b{position:relative}
+.rpe button.on{outline:2px solid #fff;outline-offset:1px}
+.rpe button.on i{opacity:1}
+.step{display:flex;align-items:center;justify-content:space-between;background:var(--s2);border-radius:14px;padding:8px}
+.step button{width:48px;height:48px;border-radius:12px;background:var(--s3);font-size:1.5rem;color:var(--soft)}
+.step b{font-family:'Barlow Condensed',sans-serif;font-size:2.1rem;font-weight:800;line-height:1}
+.step b small{font-size:.9rem;color:var(--muted);margin-left:4px;font-family:'Barlow',sans-serif;font-weight:500}
+textarea.inp{border:1px solid var(--line2);border-radius:12px;padding:12px;font-size:.95rem;min-height:84px;resize:vertical}
+.dock{position:fixed;left:0;right:0;bottom:0;z-index:30;padding:14px 16px calc(14px + var(--safe-b));background:linear-gradient(transparent,var(--bg) 35%)}
+.dock .btn{max-width:528px;margin:0 auto}
+.dock .btn.wait{background:var(--s3);box-shadow:none;color:var(--muted)}
+.note{margin-top:12px;padding:14px 16px;display:flex;gap:12px;align-items:center;border-color:rgba(210,171,98,.35);background:linear-gradient(90deg,rgba(210,171,98,.1),var(--s1))}
+.note b{display:block;font-weight:600}.note small{color:var(--muted)}
+.done-top{text-align:center;padding:26px 10px 6px}
+.done-top .ring{margin:0 auto;width:160px;height:160px}
+.done-top .pct{font-size:3rem}
+.done-top h3{font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:2.2rem;text-transform:uppercase;margin-top:18px}
+.done-top p{color:var(--muted);margin-top:6px;line-height:1.5}
+.done-top p b{color:var(--text)}
+.mini4{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:20px}
+.mini4 div{background:var(--s1);border:1px solid var(--line);border-radius:14px;padding:12px 4px;text-align:center}
+.mini4 b{display:block;font-family:'Barlow Condensed',sans-serif;font-size:1.5rem}
+.mini4 small{color:var(--muted);font-size:.7rem}
+.gate{min-height:80dvh;display:flex;flex-direction:column;justify-content:center;text-align:center;gap:14px}
+.gate .logo{width:150px;margin:0 auto 10px}
+.gate h2{font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:2rem;text-transform:uppercase}
+.gate p{color:var(--muted);line-height:1.5}
 </style>
 </head>
 <body>
-
-<div id="s-loading"><div class="spinner"></div><div class="loading-txt">Cargando...</div></div>
-
-<div id="s-form" class="screen">
-<div class="auth-wrap">
-  <div class="auth-logo"><img src="data:image/webp;base64,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" alt="Euforia"></div>
-  <div class="auth-badge">Post-entrenamiento</div>
-  <div class="auth-title">CONTROL DE<br><span>BIENESTAR</span></div>
-  <div class="auth-sub">Llénalo después de cada entrenamiento</div>
-
-  <div class="form-wrap">
-
-    <div class="bq-card">
-      <div class="sec-lbl">Jugador y sesión</div>
-      <label class="lbl">Jugador</label>
-      <select class="inp" id="jugador">
-        <option value="">Cargando lista…</option>
-      </select>
-      <div class="bq-field">
-        <label class="lbl">Fecha</label>
-        <input class="inp" id="fecha" type="date" style="margin-bottom:0">
-      </div>
-      <div class="bq-field" style="margin-top:14px">
-        <label class="lbl">Tipo de sesión</label>
-        <div class="bq-pillgroup" id="tipoSesion" style="margin-top:6px">
-          <div class="bq-pill" data-val="Entre semana">Entre semana</div>
-          <div class="bq-pill" data-val="Fin de semana / Festivo">Fin de semana / Festivo</div>
-        </div>
-      </div>
-    </div>
-
-    <div class="bq-card">
-      <div class="sec-lbl">Sueño</div>
-      <div class="bq-field">
-        <label class="lbl">Horas de sueño (última noche)</label>
-        <input class="inp" id="horasSueno" type="number" min="0" max="14" step="0.5" placeholder="Ej. 7.5" style="margin-bottom:0">
-      </div>
-      <div class="bq-field">
-        <label class="lbl">Calidad de sueño</label>
-        <div class="bq-scale" data-group="calidad_sueno" data-labels="Insomnio,Sueño inquieto,Dificultad para conciliar el sueño,Bueno,Muy descansado">
-          <button data-val="1">1</button><button data-val="2">2</button><button data-val="3">3</button><button data-val="4">4</button><button data-val="5">5</button>
-        </div>
-        <div class="bq-caption" data-caption-for="calidad_sueno"></div>
-      </div>
-    </div>
-
-    <div class="bq-card">
-      <div class="sec-lbl">Estado físico</div>
-      <div class="bq-field">
-        <label class="lbl">Fatiga</label>
-        <div class="bq-scale" data-group="fatiga" data-labels="Muy fatigado,Fatigado,Normal,Recuperado,Muy recuperado">
-          <button data-val="1">1</button><button data-val="2">2</button><button data-val="3">3</button><button data-val="4">4</button><button data-val="5">5</button>
-        </div>
-        <div class="bq-caption" data-caption-for="fatiga"></div>
-      </div>
-      <div class="bq-field">
-        <label class="lbl">Daño muscular general</label>
-        <div class="bq-scale" data-group="dano_muscular" data-labels="Muy adolorido,Adolorido,Normal,Buenas sensaciones,Muy buenas sensaciones">
-          <button data-val="1">1</button><button data-val="2">2</button><button data-val="3">3</button><button data-val="4">4</button><button data-val="5">5</button>
-        </div>
-        <div class="bq-caption" data-caption-for="dano_muscular"></div>
-      </div>
-    </div>
-
-    <div class="bq-card">
-      <div class="sec-lbl">Estado emocional</div>
-      <div class="bq-field">
-        <label class="lbl">Nivel de estrés</label>
-        <div class="bq-scale" data-group="estres" data-labels="Muy estresado,Estresado,Normal,Relajado,Muy relajado">
-          <button data-val="1">1</button><button data-val="2">2</button><button data-val="3">3</button><button data-val="4">4</button><button data-val="5">5</button>
-        </div>
-        <div class="bq-caption" data-caption-for="estres"></div>
-      </div>
-      <div class="bq-field">
-        <label class="lbl">Estado de ánimo / humor</label>
-        <div class="bq-scale" data-group="animo" data-labels="Molesto / deprimido,Mal humor / triste,Serio,Contento,Muy positivo / contento">
-          <button data-val="1">1</button><button data-val="2">2</button><button data-val="3">3</button><button data-val="4">4</button><button data-val="5">5</button>
-        </div>
-        <div class="bq-caption" data-caption-for="animo"></div>
-      </div>
-    </div>
-
-    <div class="bq-card">
-      <div class="sec-lbl">Esfuerzo del entrenamiento</div>
-      <div class="bq-hint">RPE — ¿qué tan duro sentiste el entrenamiento de hoy?</div>
-      <div class="bq-scale rpe" data-group="rpe" data-labels="Muy, muy fácil,Fácil,Moderado,Algo duro,Duro,Duro,Muy duro,Muy duro,Extremo,Máximo esfuerzo">
-        <button data-val="1">1</button><button data-val="2">2</button><button data-val="3">3</button><button data-val="4">4</button><button data-val="5">5</button><button data-val="6">6</button><button data-val="7">7</button><button data-val="8">8</button><button data-val="9">9</button><button data-val="10">10</button>
-      </div>
-      <div class="bq-caption" data-caption-for="rpe"></div>
-    </div>
-
-    <div class="bq-card">
-      <div class="sec-lbl">Comentarios</div>
-      <label class="lbl">Opcional — molestias específicas o algo que quieras contarnos</label>
-      <textarea class="inp" id="comentarios" placeholder="Ej. dolor leve en rodilla derecha desde el sábado…" style="margin-bottom:0"></textarea>
-    </div>
-
-    <button class="btn" id="btnSubmit"><div class="btn-sp" id="sp-submit"></div><span id="txt-submit">ENVIAR REGISTRO</span></button>
-    <div class="err" id="err-form"></div>
-  </div>
-
-  <footer><strong>Euforia Open</strong> &nbsp;·&nbsp; Bogotá 2026 &nbsp;·&nbsp; Control de Bienestar</footer>
-</div>
-</div>
-
-<div id="s-success" class="screen">
-<div class="auth-wrap" style="justify-content:center">
-  <div class="success-wrap">
-    <div class="tick">✓</div>
-    <h2>Registro guardado</h2>
-    <p>Gracias por llenarlo. Nos vemos en la próxima sesión 💪</p>
-    <button class="btn" style="margin-top:24px" onclick="location.reload()">REGISTRAR OTRO</button>
-  </div>
-</div>
-</div>
+<svg width="0" height="0" style="position:absolute"><defs><linearGradient id="rg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff6b5e"/><stop offset="1" stop-color="#c0272d"/></linearGradient></defs></svg>
+<div class="wrap" id="root"></div>
+<div class="dock" id="dock" hidden><button class="btn wait" id="b-send" onclick="send()"><span class="sp"></span><span class="tx">Faltan respuestas</span></button></div>
+<div class="toast" id="toast"></div>
 
 <script>
-  // ── CONFIGURACIÓN ──────────────────────────────────────────
-  const API = "https://script.google.com/macros/s/AKfycbwbV5XInsoGL7A_fWG767cGdltf7-h_do8VmYCkcDhU4xskeBKCQ4BkzsrVJGyv44IR/exec";
-  // ────────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════
+// EUFORIA — Control de bienestar
+// El jugador entra con su sesión del portal; el nombre lo pone el servidor.
+// ══════════════════════════════════════════════════════════════
+const API='https://script.google.com/macros/s/AKfycbwbV5XInsoGL7A_fWG767cGdltf7-h_do8VmYCkcDhU4xskeBKCQ4BkzsrVJGyv44IR/exec';
+const DEMO=new URLSearchParams(location.search).has('demo');
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const LS={get(k){try{return JSON.parse(localStorage.getItem(k)||'null');}catch{return null;}}};
+const SESSION=DEMO?{codigo:'demo',nombre:'Jugador Demo',token:'demo'}:LS.get('euf_s');
+const first=n=>String(n||'').trim().split(/\s+/).pop();
+const initials=n=>String(n||'').trim().split(/\s+/).slice(0,2).map(w=>w[0]).join('').toUpperCase();
+function toast(m){const t=$('toast');t.textContent=m;t.classList.add('show');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('show'),2800);}
 
-  const BQ = {};
-
-  async function api(params){
-    const qs = Object.entries(params).map(([k,v])=>k+'='+encodeURIComponent(v)).join('&');
-    const r = await fetch(API + '?' + qs);
-    return r.json();
-  }
-
-  function show(id){
-    document.getElementById('s-loading').classList.add('hidden');
-    ['s-form','s-success'].forEach(s=>document.getElementById(s).classList.remove('active'));
-    document.getElementById(id).classList.add('active');
-  }
-  function showErr(el, msg){ el.textContent = msg; el.classList.add('show'); }
-  function setLoad(on){
-    document.getElementById('sp-submit').style.display = on ? 'block' : 'none';
-    document.getElementById('txt-submit').style.display = on ? 'none' : 'block';
-  }
-
-  // Fecha por defecto = hoy
-  const fechaInput = document.getElementById('fecha');
-  const today = new Date();
-  fechaInput.value = today.toISOString().split('T')[0];
-
-  // Tipo de sesión sugerido según el día actual (editable)
-  const dow = today.getDay();
-  const tipoDefault = (dow === 0 || dow === 6) ? "Fin de semana / Festivo" : "Entre semana";
-  BQ.tipo_sesion = tipoDefault;
-  document.querySelectorAll('#tipoSesion .bq-pill').forEach(p=>{
-    if(p.dataset.val === tipoDefault) p.classList.add('active');
-    p.addEventListener('click', ()=>{
-      document.querySelectorAll('#tipoSesion .bq-pill').forEach(x=>x.classList.remove('active'));
-      p.classList.add('active');
-      BQ.tipo_sesion = p.dataset.val;
-    });
-  });
-
-  // Escalas 1-5 y RPE 1-10
-  document.querySelectorAll('.bq-scale').forEach(group=>{
-    const key = group.dataset.group;
-    const labels = group.dataset.labels.split(',');
-    const caption = document.querySelector(`[data-caption-for="${key}"]`);
-    group.querySelectorAll('button').forEach(btn=>{
-      btn.addEventListener('click', ()=>{
-        group.querySelectorAll('button').forEach(b=>b.classList.remove('active'));
-        btn.classList.add('active');
-        BQ[key] = btn.dataset.val;
-        caption.textContent = labels[Number(btn.dataset.val)-1];
-      });
-    });
-  });
-
-  // Cargar jugadores
-  const selectJugador = document.getElementById('jugador');
-  api({action:'getJugadores'})
-    .then(data=>{
-      selectJugador.innerHTML = '<option value="">Selecciona tu nombre</option>';
-      (data.jugadores || []).forEach(nombre=>{
-        const opt = document.createElement('option');
-        opt.value = nombre; opt.textContent = nombre;
-        selectJugador.appendChild(opt);
-      });
-      show('s-form');
-    })
-    .catch(()=>{
-      selectJugador.innerHTML = '<option value="">Error cargando lista</option>';
-      show('s-form');
-    });
-
-  // Envío
-  const btnSubmit = document.getElementById('btnSubmit');
-  const errEl = document.getElementById('err-form');
-
-  btnSubmit.addEventListener('click', async ()=>{
-    errEl.classList.remove('show');
-    const jugador = selectJugador.value;
-    const required = ['calidad_sueno','fatiga','dano_muscular','estres','animo','rpe'];
-    const missing = required.filter(k => !BQ[k]);
-
-    if(!jugador){ showErr(errEl, 'Falta seleccionar el jugador.'); return; }
-    if(missing.length){ showErr(errEl, 'Faltan campos por responder arriba.'); return; }
-
-    btnSubmit.disabled = true;
-    setLoad(true);
-
+async function api(params,post){
+  for(let i=0;;i++){
+    const ctrl=new AbortController(),t=setTimeout(()=>ctrl.abort(),25000);
     try{
-      const res = await api({
-        action: 'submitBienestar',
-        nombre: jugador,
-        fecha: fechaInput.value,
-        tipo_sesion: BQ.tipo_sesion,
-        horas_sueno: document.getElementById('horasSueno').value,
-        calidad_sueno: BQ.calidad_sueno,
-        fatiga: BQ.fatiga,
-        dano_muscular: BQ.dano_muscular,
-        estres: BQ.estres,
-        animo: BQ.animo,
-        rpe: BQ.rpe,
-        comentarios: document.getElementById('comentarios').value
-      });
-      if(res.ok){
-        show('s-success');
-      } else {
-        showErr(errEl, res.error || 'No se pudo guardar. Intenta de nuevo.');
-        btnSubmit.disabled = false;
-        setLoad(false);
-      }
-    }catch{
-      showErr(errEl, 'Error de conexión. Intenta de nuevo.');
-      btnSubmit.disabled = false;
-      setLoad(false);
-    }
-  });
-</script>
+      const r=post?await fetch(API,{method:'POST',body:JSON.stringify(params),signal:ctrl.signal})
+                  :await fetch(API+'?'+new URLSearchParams(params),{signal:ctrl.signal});
+      const txt=await r.text();try{return JSON.parse(txt);}catch{throw new Error('Respuesta no válida');}
+    }catch(e){if(post||i>=2)throw e;await new Promise(r=>setTimeout(r,1500*(i+1)));}
+    finally{clearTimeout(t);}
+  }
+}
 
+// ── Preguntas (mismas escalas y etiquetas del formulario anterior) ──
+const Q=[
+  {k:'calidad_sueno',t:'Calidad del sueño',l:['Insomnio','Sueño inquieto','Dificultad para conciliar el sueño','Bueno','Muy descansado']},
+  {k:'fatiga',t:'Fatiga',l:['Muy fatigado','Fatigado','Normal','Recuperado','Muy recuperado']},
+  {k:'dano_muscular',t:'Daño muscular general',l:['Muy adolorido','Adolorido','Normal','Buenas sensaciones','Muy buenas sensaciones']},
+  {k:'estres',t:'Nivel de estrés',l:['Muy estresado','Estresado','Normal','Relajado','Muy relajado']},
+  {k:'animo',t:'Estado de ánimo',l:['Molesto / deprimido','Mal humor / triste','Serio','Contento','Muy positivo / contento']},
+];
+const RPE_L=['Muy, muy fácil','Fácil','Moderado','Algo duro','Duro','Duro','Muy duro','Muy duro','Extremo','Máximo esfuerzo'];
+const RPE_C=['#3ddc84','#5fd17a','#8fcf6a','#b9c95a','#e0bf4c','#f5a742','#f4843f','#ee6340','#e5453f','#c0272d'];
+const iso=d=>new Date(d.getTime()-d.getTimezoneOffset()*6e4).toISOString().slice(0,10);
+const TODAY=iso(new Date()),YEST=iso(new Date(Date.now()-864e5));
+const A={fecha:TODAY,horas_sueno:7,tipo_sesion:''};
+let HIST=[];
+
+function tipoFor(f){const d=new Date(f+'T12:00:00').getDay();return d===0||d===6?'Fin de semana / Festivo':'Entre semana';}
+A.tipo_sesion=tipoFor(A.fecha);
+const answered=()=>Q.filter(q=>A[q.k]).length+(A.rpe?1:0);
+const TOTAL=Q.length+1;
+const backBtn='<a class="back" href="index.html" aria-label="Volver al portal"><svg class="i" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg></a>';
+
+function render(){
+  if(!SESSION?.token){
+    $('root').innerHTML=`<div class="gate"><span class="logo"></span><h2>Control de bienestar</h2>
+      <p>Para registrar tu bienestar entra primero al portal con tu número de camiseta.</p>
+      <a class="btn" href="index.html">Ir al portal</a></div>`;
+    return;
+  }
+  const already=HIST.some(h=>h.fecha===A.fecha);
+  const dLabel=A.fecha===TODAY?'Hoy':A.fecha===YEST?'Ayer':new Date(A.fecha+'T12:00:00').toLocaleDateString('es-CO',{weekday:'short',day:'numeric',month:'short'});
+  $('root').innerHTML=`
+  <div class="sub-h">${backBtn}<h2>Bienestar</h2><span class="logo" style="width:72px"></span></div>
+  <div class="prog"><div class="track"><i id="prog-i"></i></div><small id="prog-t"></small></div>
+  <div class="card who"><div class="avatar">${esc(initials(SESSION.nombre))}</div><div style="min-width:0"><b>${esc(first(SESSION.nombre))}</b><small>${esc(dLabel)}</small></div>
+    <div class="dates"><button class="${A.fecha===TODAY?'on':''}" onclick="setFecha('${TODAY}')">Hoy</button><button class="${A.fecha===YEST?'on':''}" onclick="setFecha('${YEST}')">Ayer</button>
+    <button class="${A.fecha!==TODAY&&A.fecha!==YEST?'on':''}" aria-label="Otra fecha" onclick="otraFecha()">📅</button><input type="date" id="f-otra" max="${TODAY}" value="${A.fecha}" onchange="this.value&&setFecha(this.value)"></div></div>
+  ${already?`<div class="card note"><span style="font-size:1.4rem">⚠️</span><div><b>Ya tienes un registro ese día</b><small>Si lo envías otra vez quedará duplicado.</small></div></div>`:''}
+  <div class="card q"><div class="head"><h4>Tipo de sesión</h4></div>
+    <div class="seg2" style="margin:0">${['Entre semana','Fin de semana / Festivo'].map(v=>`<button class="${A.tipo_sesion===v?'on':''}" onclick="A.tipo_sesion='${v}';keep(render)">${v==='Entre semana'?'Entre semana':'Fin de semana'}</button>`).join('')}</div></div>
+  <div class="card q done"><div class="head"><h4>¿Cuántas horas dormiste?</h4><p>La noche anterior</p></div>
+    <div class="step"><button onclick="sleep(-.5)" aria-label="Menos">−</button><b>${String(A.horas_sueno).replace('.',',')}<small>horas</small></b><button onclick="sleep(.5)" aria-label="Más">+</button></div></div>
+  ${Q.map(q=>`<div class="card q ${A[q.k]?'done':''}"><div class="head"><h4>${q.t}</h4></div>
+    <div class="scale">${[1,2,3,4,5].map(v=>`<button class="${A[q.k]==v?'on':''}" onclick="pick('${q.k}',${v})">${v}</button>`).join('')}</div>
+    ${A[q.k]?`<div class="caption">${q.l[A[q.k]-1]}</div>`:`<div class="ends"><span>${q.l[0]}</span><span>${q.l[4]}</span></div>`}</div>`).join('')}
+  <div class="card q ${A.rpe?'done':''}"><div class="head"><h4>¿Qué tan duro fue el entreno? (RPE)</h4><p>1 muy suave · 10 al límite</p></div>
+    <div class="rpe">${RPE_C.map((c,i)=>`<button class="${A.rpe==i+1?'on':''}" onclick="pick('rpe',${i+1})"><i style="height:${28+i*7}%;background:${c}"></i><b>${i+1}</b></button>`).join('')}</div>
+    ${A.rpe?`<div class="caption">${RPE_L[A.rpe-1]}</div>`:''}</div>
+  <div class="card q"><div class="head"><h4>Comentarios <span style="color:var(--muted);font-weight:500">(opcional)</span></h4><p>Molestias específicas o algo que quieras contarnos</p></div>
+    <textarea class="inp" id="coment" placeholder="Ej. dolor leve en rodilla derecha desde el sábado…" oninput="A.comentarios=this.value">${esc(A.comentarios||'')}</textarea></div>`;
+  $('dock').hidden=false;
+  progress();
+}
+const keep=fn=>{const y=scrollY;fn();scrollTo(0,y);};
+function progress(){
+  const a=answered(),left=TOTAL-a;
+  $('prog-i').style.width=(a/TOTAL*100)+'%';
+  $('prog-t').textContent=left?`${a} de ${TOTAL} · te ${left===1?'falta 1':'faltan '+left}`:'¡Listo para enviar!';
+  const b=$('b-send');b.classList.toggle('wait',!!left);b.querySelector('.tx').textContent=left?(left===1?'Falta 1 respuesta':`Faltan ${left} respuestas`):'Enviar registro';
+}
+function pick(k,v){A[k]=v;keep(render);}
+function sleep(d){A.horas_sueno=Math.min(14,Math.max(0,Math.round((A.horas_sueno+d)*2)/2));keep(render);}
+function setFecha(f){A.fecha=f;A.tipo_sesion=tipoFor(f);keep(render);}
+function otraFecha(){const i=$('f-otra');try{i.showPicker();}catch{i.click();}}
+
+async function send(){
+  const left=TOTAL-answered();
+  if(left){const q=[...document.querySelectorAll('.q')].find(x=>!x.classList.contains('done')&&x.querySelector('.scale,.rpe'));
+    if(q)q.scrollIntoView({behavior:'smooth',block:'center'});toast(left===1?'Falta 1 respuesta':`Faltan ${left} respuestas`);return;}
+  const b=$('b-send');b.classList.add('load');b.disabled=true;
+  const payload={action:'submitBienestar',token:SESSION.token,nombre:SESSION.nombre,fecha:A.fecha,tipo_sesion:A.tipo_sesion,horas_sueno:A.horas_sueno,
+    calidad_sueno:A.calidad_sueno,fatiga:A.fatiga,dano_muscular:A.dano_muscular,estres:A.estres,animo:A.animo,rpe:A.rpe,comentarios:A.comentarios||''};
+  try{
+    const r=DEMO?demoSend(payload):await api(payload,true);
+    if(!r.ok&&r.auth===false){localStorage.removeItem('euf_s');location.href='index.html';return;}
+    if(!r.ok)throw new Error(r.error);
+    done(r);
+  }catch(e){toast('No se pudo enviar. Revisa tu señal e intenta de nuevo.');b.classList.remove('load');b.disabled=false;}
+}
+
+function done(r){
+  $('dock').hidden=true;scrollTo(0,0);
+  const h=r.hist&&r.hist.length?r.hist:[{fecha:A.fecha,indice:r.indice}];
+  const prev=h.slice(0,-1).slice(-7),avg=prev.length?prev.reduce((s,x)=>s+x.indice,0)/prev.length:null;
+  const diff=avg==null?null:Math.round((r.indice-avg)*10)/10;
+  const mes=h.filter(x=>x.fecha.slice(0,7)===A.fecha.slice(0,7)).length;
+  const last=h.slice(-7),C=326.7,dec=v=>String(v).replace('.',',');
+  const msg=diff==null?'Es tu primer registro. ¡Bien hecho!'
+    :Math.abs(diff)<.5?`Estás en tu promedio reciente (<b>${dec(avg.toFixed(1))}</b>).`
+    :diff>0?`<b>${dec(diff)} puntos arriba</b> de tu promedio reciente.`
+    :`<b>${dec(Math.abs(diff))} puntos abajo</b> de tu promedio reciente. Cuídate y descansa.`;
+  $('root').innerHTML=`
+  <div class="sub-h">${backBtn}<h2>Bienestar</h2><span class="logo" style="width:72px"></span></div>
+  <div class="done-top">
+    <div class="ring"><svg viewBox="0 0 120 120"><circle class="trk" cx="60" cy="60" r="52"/><circle class="val" id="rv" cx="60" cy="60" r="52" stroke-dasharray="${C}" stroke-dashoffset="${C}"/></svg>
+      <div class="ctr"><div class="pct">${r.indice}</div><div class="lbl">de 20</div></div></div>
+    <h3>¡Registro guardado!</h3><p>Tu índice de bienestar es <b>${r.indice}/20</b>.<br>${msg}</p></div>
+  <div class="mini4"><div><b>${A.fatiga}</b><small>Fatiga</small></div><div><b>${A.dano_muscular}</b><small>Músculo</small></div><div><b>${A.estres}</b><small>Estrés</small></div><div><b>${A.animo}</b><small>Ánimo</small></div></div>
+  <div class="card streak" style="margin-top:14px"><span class="em">🔥</span><div><b>${mes} registro${mes===1?'':'s'} este mes</b><small>Cada registro ayuda al cuerpo técnico a cuidar tu carga.</small></div></div>
+  ${last.length>1?`<div class="sec"><div class="sec-h"><span class="cap">Tus últimos ${last.length} registros</span></div><div class="card chart" id="spark"></div></div>`:''}
+  <a class="btn" href="index.html" style="margin-top:20px">Volver al portal</a>`;
+  if(last.length>1)$('spark').innerHTML=spark(last);
+  requestAnimationFrame(()=>requestAnimationFrame(()=>$('rv').style.strokeDashoffset=C*(1-r.indice/20)));
+}
+function spark(v){
+  const W=320,H=120,p=18,n=v.length,x=i=>p+i*(W-2*p)/(n-1),y=a=>H-22-(a-4)/16*(H-36);
+  const d=v.map((a,i)=>(i?'L':'M')+x(i)+' '+y(a.indice)).join(' ');
+  const lab=f=>new Date(f+'T12:00:00').toLocaleDateString('es-CO',{day:'numeric',month:'short'}).replace(' de ',' ').replace('.','');
+  return `<svg viewBox="0 0 ${W} ${H}" font-family="Barlow"><defs><linearGradient id="fa" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e5383e" stop-opacity=".35"/><stop offset="1" stop-color="#e5383e" stop-opacity="0"/></linearGradient></defs>
+    <path d="${d} L${x(n-1)} ${H-22} L${x(0)} ${H-22}Z" fill="url(#fa)"/><path d="${d}" fill="none" stroke="#e5383e" stroke-width="2.5" stroke-linecap="round" style="filter:drop-shadow(0 0 5px rgba(229,56,62,.6))"/>
+    ${v.map((a,i)=>`<circle cx="${x(i)}" cy="${y(a.indice)}" r="${i===n-1?5:3}" fill="${i===n-1?'#fff':'#e5383e'}"/><text x="${x(i)}" y="${y(a.indice)-9}" fill="rgba(255,255,255,.6)" font-size="9" text-anchor="middle">${a.indice}</text><text x="${x(i)}" y="${H-5}" fill="rgba(255,255,255,.4)" font-size="8.5" text-anchor="middle">${i===n-1?'Hoy':lab(a.fecha)}</text>`).join('')}</svg>`;
+}
+
+// ── Demo (bienestar.html?demo): no guarda nada ──
+function demoSend(p){
+  const idx=+p.fatiga + +p.dano_muscular + +p.estres + +p.animo;
+  const base=[12,13,11,14,13,15].map((v,i)=>({fecha:iso(new Date(Date.now()-(12-i*2)*864e5)),indice:v}));
+  return{ok:true,indice:idx,hist:[...base,{fecha:p.fecha,indice:idx}]};
+}
+
+render();
+if(SESSION?.token&&!DEMO)api({action:'getMiBienestar',token:SESSION.token}).then(r=>{
+  if(r.ok){HIST=r.hist||[];if(!document.querySelector('.done-top'))keep(render);}
+  else if(r.auth===false){localStorage.removeItem('euf_s');location.href='index.html';}
+}).catch(()=>{});
+</script>
 </body>
 </html>
