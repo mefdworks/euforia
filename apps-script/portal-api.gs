@@ -1,5 +1,5 @@
 // ══════════════════════════════════════════════════════════════
-// EUFORIA PORTAL — Apps Script API v5
+// EUFORIA PORTAL — Apps Script API v5.1 (getPortal devuelve statsName, col E de USUARIOS)
 // Cambios frente a v4:
 //   · Caché de hojas (CacheService) → menos lecturas, menos timeouts
 //   · getPortal: jugador + presupuesto en UNA sola ejecución, con token
@@ -21,7 +21,7 @@ const CFG = {
 const SH = { USERS: 'USUARIOS', SEG: 'SEGUIMIENTO', PRES: 'PRESUPUESTO', BIEN: 'BIENESTAR' };
 
 const ROUTES = {
-  ping:            p => ({ ok: true, message: 'Euforia API v5 ✓' }),
+  ping:            p => ({ ok: true, message: 'Euforia API v5.1 ✓' }),
   isFirstTime:     p => isFirstTime(p.codigo),
   register:        p => register(p.codigo, p.password),
   login:           p => login(p.codigo, p.password),
@@ -102,6 +102,7 @@ function findUser_(codigo, fresh) {
         nombre: str_(data[i][1]),
         pass: str_(data[i][2]),
         activo: str_(data[i][3]).toUpperCase() === 'SI',
+        statsName: str_(data[i][4]),   // col E "Nombre stats" (base de estadísticas)
       };
     }
   }
@@ -260,7 +261,7 @@ function getPortal(token) {
   if (!codigo) return { ok: false, auth: false, error: 'Tu sesión venció, ingresa de nuevo.' };
   const u = findUser_(codigo);
   if (!u || !u.activo) return { ok: false, auth: false, error: 'Usuario inactivo.' };
-  return { ok: true, nombre: u.nombre, player: getPlayer(u.nombre), presupuesto: getPresupuesto() };
+  return { ok: true, nombre: u.nombre, statsName: u.statsName, player: getPlayer(u.nombre), presupuesto: getPresupuesto() };
 }
 
 // ── Ítems del PRESUPUESTO (fila 1 = título, fila 2 = headers, col A cat, B ítem, C costo) ──
