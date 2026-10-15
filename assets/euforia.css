@@ -75,6 +75,19 @@ body.in #auth{display:none}body.in #app{display:block}
 .pill::before{content:'';width:7px;height:7px;border-radius:50%;background:currentColor}
 .pill.ok{background:rgba(61,220,132,.16);color:var(--ok)}.pill.bad{background:rgba(255,90,95,.18);color:var(--due)}
 
+/* Bicampeones: 7 estrellas, la última es el título 2026 */
+.champ{display:flex;flex-direction:column;align-items:center;gap:7px}
+.stars{display:flex;align-items:center;gap:5px;filter:drop-shadow(0 0 6px rgba(210,171,98,.35))}
+.stars i{display:block;width:14px;height:14px;background:linear-gradient(160deg,#f6dc9a,var(--gold) 55%,#a9833f);clip-path:polygon(50% 0,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%);animation:pop .4s ease both}
+.stars i:nth-child(2){animation-delay:.05s}.stars i:nth-child(3){animation-delay:.1s}.stars i:nth-child(4){animation-delay:.15s}.stars i:nth-child(5){animation-delay:.2s}.stars i:nth-child(6){animation-delay:.25s}
+.stars b{display:block;margin-left:3px;filter:drop-shadow(0 0 8px rgba(246,220,154,.75));animation:twinkle 2.6s 1s ease-in-out infinite}
+.stars b i{width:22px;height:22px;background:linear-gradient(160deg,#fff6d8,#f6dc9a 45%,var(--gold));animation-delay:.35s}
+.champ span{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:.78rem;letter-spacing:3px;text-transform:uppercase;color:var(--gold)}
+#auth .champ{margin-bottom:14px;animation:up .5s .04s ease both}
+.hero .champ{align-items:flex-start;margin-bottom:auto;padding-bottom:18px}
+@keyframes pop{from{opacity:0;transform:scale(.3)}to{opacity:1;transform:none}}
+@keyframes twinkle{50%{transform:scale(1.12);filter:drop-shadow(0 0 14px rgba(246,220,154,.95))}}
+
 /* Inicio: anillo */
 .ring-card{margin-top:14px;padding:20px;display:grid;grid-template-columns:132px 1fr;gap:18px;align-items:center;position:relative;overflow:hidden}
 .ring-card::before{content:'';position:absolute;width:220px;height:220px;left:-40px;top:-40px;background:radial-gradient(circle,rgba(229,56,62,.22),transparent 65%);pointer-events:none}

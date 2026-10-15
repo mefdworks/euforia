@@ -24,6 +24,7 @@
 <section id="auth">
   <div class="photo">
     <span class="logo" role="img" aria-label="Euforia"></span>
+    <div class="champ"><div class="stars" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><b><i></i></b></div><span>Bicampeones nacionales</span></div>
     <h1 class="auth-title">Portal del<br>jugador<em>Temporada 2026</em></h1>
   </div>
   <div class="auth-form">
@@ -319,12 +320,14 @@ function itemRow(i){
   return `<div class="row"><div class="dot ${i.st}">${mark}</div><div class="nm"><b>${esc(i.item)}</b><small>${sub}</small></div><div class="amt ${i.st}">${amt}</div></div>`;
 }
 
+const CHAMP='<div class="champ"><div class="stars" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><b><i></i></b></div><span>Bicampeones nacionales</span></div>';
 function renderInicio(){
   const d=DATA,C=2*Math.PI*52;
   const fecha=new Date().toLocaleDateString('es-CO',{weekday:'long',day:'numeric',month:'long'});
   const pend=d.due.slice(0,4);
   $('v-inicio').innerHTML=`
     <div class="hero photo">
+      ${CHAMP}
       <div class="date">${esc(fecha)}</div>
       <h1>Hola,<br>${esc(first(d.nombre))}</h1>
       <span class="pill ${d.mora?'bad':'ok'}">${d.mora?'En mora':'Al día'}</span>
