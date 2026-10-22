@@ -431,10 +431,10 @@ async function savePago(){
     if(!r.ok)showErr('err-pago',r.error);
     else{
       ST.last={tabla:'pagos',id:r.id,txt:`${first(ST.pick.nombre)} · ${IX.c[data.idConc].concepto} · ${data.medio==='Exoneración'?'exonerado':fCOP(data.valor)}`};
-      toast('Pago registrado');
-      await loadSaldoJug(ST.pick.id,true);
-      const keep=ST.pick.id;formPago();ST.pick=IX.j[keep];
-      $('p-conc').innerHTML=`<option value="">Escoge el concepto</option>${concOptions('')}`;
+      toast(DEMO?'Demo: no se guardó en el Sheet':'Pago registrado · '+r.id);
+      // el formulario queda libre ya; el saldo del jugador se refresca por detrás
+      const keep=ST.pick.id;delete ST.saldoJug[keep];formPago();
+      loadSaldoJug(keep,true).then(()=>{const sel=$('p-conc');if(sel&&ST.pick&&ST.pick.id===keep){const cur=sel.value;sel.innerHTML=`<option value="">Escoge el concepto</option>${concOptions(cur)}`;onConc();}});
     }
   }catch(e){showErr('err-pago',e.message||NET_ERR);}
   busy('b-pago',false);
@@ -481,7 +481,7 @@ async function saveGasto(){
   try{
     const r=await adm('adminSave',{tabla:'gastos',data});
     if(!r.ok)showErr('err-gasto',r.error);
-    else{ST.last={tabla:'gastos',id:r.id,txt:`${IX.t[data.idTipo].nombre} · ${fCOP(data.valor)}`};ST.cxp=null;toast('Gasto registrado');formGasto();}
+    else{ST.last={tabla:'gastos',id:r.id,txt:`${IX.t[data.idTipo].nombre} · ${fCOP(data.valor)}`};ST.cxp=null;toast(DEMO?'Demo: no se guardó en el Sheet':'Gasto registrado · '+r.id);formGasto();}
   }catch(e){showErr('err-gasto',e.message||NET_ERR);}
   busy('b-gasto',false);
 }
@@ -737,6 +737,7 @@ function demoApi(p){
 // ARRANQUE
 // ══════════════════════════════════════════════════════════════
 paintIcons();
+if(DEMO)document.body.insertAdjacentHTML('beforeend','<div class="demo-flag">Modo demo · no guarda</div>');
 $('inp-codigo').addEventListener('keydown',e=>{if(e.key==='Enter')checkCodigo();});
 $('inp-login-pass').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
 (async()=>{

@@ -1,5 +1,5 @@
 // ══════════════════════════════════════════════════════════════
-// EUFORIA PORTAL — API ADMINISTRATIVA v1
+// EUFORIA PORTAL — API ADMINISTRATIVA v1.1
 //   Archivo aparte dentro del MISMO proyecto de Apps Script que portal-api.gs
 //   (usa su login, token, findUser_, withLock_ y str_).
 //   Lee y escribe el Sheet "2027 EUFORIA CUENTAS GENERALES" (fuente nueva).
@@ -92,7 +92,7 @@ const ADM_REFS = {
 };
 
 const ADMIN_ROUTES = {
-  adminPing:      p => ({ ok: true, message: 'Euforia admin v1 ✓' }),
+  adminPing:      p => ({ ok: true, message: 'Euforia admin v1.1 ✓' }),
   adminCheck:     p => admGuard_(p, u => ({ ok: true, codigo: u.codigo, nombre: u.nombre })),
   adminCatalogos: p => admGuard_(p, u => adminCatalogos_()),
   adminList:      p => admGuard_(p, u => adminList_(p)),
@@ -127,7 +127,10 @@ function admKey_(s) {
   return str_(s).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '');
 }
 
-function admSS_() { return SpreadsheetApp.openById(ADMIN.SS_ID); }
+// Una sola apertura del Sheet y una sola lectura por tabla en cada petición
+let _ADM_SS = null;
+const _ADM_C = {};
+function admSS_() { return _ADM_SS || (_ADM_SS = SpreadsheetApp.openById(ADMIN.SS_ID)); }
 
 function admSheet_(names) {
   const ss = admSS_();
@@ -194,7 +197,8 @@ function admIn_(field, v) {
 
 const admSi_ = v => str_(v).toUpperCase() === 'SI';
 
-function admLoad_(key) {
+function admLoad_(key, fresh) {
+  if (!fresh && _ADM_C[key]) return _ADM_C[key];
   const spec = ADM_T[key];
   const sh = admSheet_(spec.sheet);
   const values = sh.getDataRange().getValues();
@@ -210,7 +214,31 @@ function admLoad_(key) {
     if (req === '' || req === null || req === undefined) continue;   // fila vacía o con solo el ID
     rows.push(o);
   }
-  return { key, spec, sh, header, map, rows, byId };
+  return (_ADM_C[key] = { key, spec, sh, header, map, rows, byId });
+}
+
+// Para Pagos y Gastos (miles de filas): solo encabezado + columna de ID
+function admLoadLite_(key) {
+  const spec = ADM_T[key];
+  const sh = admSheet_(spec.sheet);
+  const lastRow = sh.getLastRow(), lastCol = Math.max(sh.getLastColumn(), 1);
+  const header = sh.getRange(1, 1, 1, lastCol).getValues()[0];
+  const map = admMap_(spec, header);
+  const byId = {};
+  if (map.id !== undefined && lastRow > 1) {
+    sh.getRange(2, map.id + 1, lastRow - 1, 1).getValues().forEach((r, i) => {
+      const id = str_(r[0]);
+      if (id) byId[id] = { _row: i + 2, id };
+    });
+  }
+  return { key, spec, sh, header, map, rows: null, byId, lite: true };
+}
+
+function admRowObj_(t, rowNum) {
+  const vals = t.sh.getRange(rowNum, 1, 1, t.header.length).getValues()[0];
+  const o = { _row: rowNum };
+  Object.keys(t.map).forEach(f => { o[f] = admOut_(vals[t.map[f]]); });
+  return o;
 }
 
 // agrega al final del encabezado las columnas que falten
@@ -236,11 +264,18 @@ function admNextId_(t) {
   return t.spec.prefix + String(max + 1).padStart(t.spec.pad, '0');
 }
 
+// Escribe la fila en una sola llamada; conserva las fórmulas de las columnas que no toca
 function admWriteRow_(t, rowNum, obj) {
-  Object.keys(obj).forEach(f => {
-    if (t.map[f] === undefined || f.charAt(0) === '_') return;
-    t.sh.getRange(rowNum, t.map[f] + 1).setValue(admIn_(f, obj[f]));
-  });
+  const fields = Object.keys(obj).filter(f => t.map[f] !== undefined && f.charAt(0) !== '_');
+  if (!fields.length) return;
+  const cols = fields.map(f => t.map[f]);
+  const c0 = Math.min.apply(null, cols), w = Math.max.apply(null, cols) - c0 + 1;
+  const rng = t.sh.getRange(rowNum, c0 + 1, 1, w);
+  const vals = rng.getValues()[0], forms = rng.getFormulas()[0];
+  const out = vals.map((v, i) => forms[i] || v);
+  fields.forEach(f => { out[t.map[f] - c0] = admIn_(f, obj[f]); });
+  rng.setValues([out]);
+  delete _ADM_C[t.key];
 }
 
 function admPublic_(o) {
@@ -323,9 +358,10 @@ function adminSave_(u, p) {
   if (!ADM_T[tabla]) return { ok: false, error: 'Tabla no válida' };
   const data = admData_(p);
   return withLock_(() => {
-    const t = admLoad_(tabla);
+    const lite = tabla === 'pagos' || tabla === 'gastos';
+    const t = lite ? admLoadLite_(tabla) : admLoad_(tabla, true);
     const id = str_(data.id || p.id);
-    const antes = id ? t.byId[id] : null;
+    const antes = id && t.byId[id] ? (lite ? admRowObj_(t, t.byId[id]._row) : t.byId[id]) : null;
     if (id && !antes && !t.spec.manualId) return { ok: false, error: 'No existe ' + id };
 
     const prep = admPrepare_(tabla, data, antes, u);
@@ -464,8 +500,9 @@ function adminDelete_(u, p) {
   const tabla = str_(p.tabla), id = str_(p.id);
   if (!ADM_T[tabla]) return { ok: false, error: 'Tabla no válida' };
   return withLock_(() => {
-    const t = admLoad_(tabla);
-    const row = t.byId[id];
+    const lite = tabla === 'pagos' || tabla === 'gastos';
+    const t = lite ? admLoadLite_(tabla) : admLoad_(tabla, true);
+    const row = t.byId[id] ? (lite ? admRowObj_(t, t.byId[id]._row) : t.byId[id]) : null;
     if (!row) return { ok: false, error: 'No existe ' + id };
     const usos = (ADM_REFS[tabla] || []).reduce((n, [tb, f]) =>
       n + admLoad_(tb).rows.filter(r => str_(r[f]) === id).length, 0);
@@ -473,6 +510,7 @@ function adminDelete_(u, p) {
       return { ok: false, usos, error: id + ' tiene ' + usos + ' movimientos asociados. Mejor desactívalo (Activo = NO) o confirma el borrado.' };
     }
     t.sh.deleteRow(row._row);
+    delete _ADM_C[tabla];
     admLog_(u, 'borrar', tabla, id, admPublic_(row), null);
     if (['pagos', 'gastos', 'cxp'].indexOf(tabla) !== -1) admSyncCxp_();
     return { ok: true, tabla, id };
@@ -616,8 +654,8 @@ function admCxpEstado_(pagos, gastos) {
 
 // deja en la hoja CXP los valores calculados (Recogido, Pagado, Saldo, Estado)
 function admSyncCxp_() {
-  const t = admLoad_('cxp');
-  const estado = admCxpEstado_(admLoad_('pagos').rows, admLoad_('gastos').rows);
+  const t = admLoad_('cxp', true);
+  const estado = admCxpEstado_(admLoad_('pagos', true).rows, admLoad_('gastos', true).rows);
   estado.forEach(c => {
     const row = t.byId[str_(c.id)];
     if (!row) return;
@@ -637,7 +675,7 @@ function adminSetup() {
   // Pagos y Gastos: columnas de ID, ID por fila y, si faltan, ID de jugador / concepto / tipo por nombre
   [['pagos', ['idJug', 'idConc', 'id', 'creado']], ['gastos', ['idConc', 'idTipo', 'notas', 'idCxp', 'id', 'registro', 'creado']]]
     .forEach(([tabla, cols]) => {
-      const t = admLoad_(tabla);
+      const t = admLoad_(tabla, true);
       admEnsure_(t, cols);
       const n = t.sh.getLastRow() - 1;
       if (n < 1) return;
