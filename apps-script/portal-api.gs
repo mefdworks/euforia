@@ -2,6 +2,7 @@
 // EUFORIA PORTAL — Apps Script API v5.2
 //   v5.1: getPortal devuelve statsName (col E de USUARIOS)
 //   v5.2: bienestar con token (el nombre sale de la sesión) + historial propio
+//   v5.3: enruta también las acciones de admin-api.gs (panel administrativo)
 // Cambios frente a v4:
 //   · Caché de hojas (CacheService) → menos lecturas, menos timeouts
 //   · getPortal: jugador + presupuesto en UNA sola ejecución, con token
@@ -23,7 +24,7 @@ const CFG = {
 const SH = { USERS: 'USUARIOS', SEG: 'SEGUIMIENTO', PRES: 'PRESUPUESTO', BIEN: 'BIENESTAR' };
 
 const ROUTES = {
-  ping:            p => ({ ok: true, message: 'Euforia API v5.2 ✓' }),
+  ping:            p => ({ ok: true, message: 'Euforia API v5.3 ✓' }),
   isFirstTime:     p => isFirstTime(p.codigo),
   register:        p => register(p.codigo, p.password),
   login:           p => login(p.codigo, p.password),
@@ -51,7 +52,8 @@ function doPost(e) {
 
 function route_(p) {
   const action = String(p.action || 'ping').trim();
-  const fn = ROUTES[action];
+  // rutas de admin-api.gs (mismo proyecto); se buscan al ejecutar para no depender del orden de los archivos
+  const fn = ROUTES[action] || (typeof ADMIN_ROUTES !== 'undefined' ? ADMIN_ROUTES[action] : undefined);
   let result;
   try {
     result = fn ? fn(p) : { ok: false, error: 'Acción no reconocida' };
