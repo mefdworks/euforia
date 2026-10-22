@@ -1,9 +1,12 @@
 // ══════════════════════════════════════════════════════════════
-// EUFORIA PORTAL — API ADMINISTRATIVA v1.1
+// EUFORIA PORTAL — API ADMINISTRATIVA v1.2
 //   Archivo aparte dentro del MISMO proyecto de Apps Script que portal-api.gs
 //   (usa su login, token, findUser_, withLock_ y str_).
 //   Lee y escribe el Sheet "2027 EUFORIA CUENTAS GENERALES" (fuente nueva).
-//   Solo entran los códigos de ADMIN.CODES. Cada cambio queda en la hoja Bitacora.
+//   Entran los usuarios con "SI" en la columna F (Admin) de USUARIOS, o los de ADMIN.CODES.
+//   Cada cambio queda en la hoja Bitacora.
+//   v1.2: estado automático + pagado/debe en Jugadores, CXP vinculadas a conceptos,
+//         adminSync() para recalcular todo (también con disparador diario).
 //
 // Primera vez (desde el editor de Apps Script):
 //   1. Ejecutar adminSetup()  → crea las columnas de ID que falten y las llena.
@@ -17,6 +20,7 @@ const ADMIN = {
   CATS: ['OPEN', 'FEMENINO', 'U24', 'SUB17', 'MASTER', 'DISCGOLF'],
   TZ: 'America/Bogota',
   LIST_LIMIT: 500,
+  DIAS_GRACIA: 0,     // días después de "Vence" antes de contar como mora
 };
 
 // Tablas del Sheet. Los nombres de columna se buscan sin tildes ni mayúsculas,
@@ -53,7 +57,7 @@ const ADM_T = {
       id: ['ID'], codigo: ['Código portal'], nombre: ['Nombre (Apellido Nombre)', 'Nombre'],
       categoria: ['Categoría'], categoria2: ['Categoría 2'], categoria3: ['Categoría 3'], activo: ['Activo'],
       afiliado: ['Afiliado'], extranjero: ['Extranjero'], lesionado: ['Lesionado'], premios: ['Premios'],
-      estado: ['Estado'],
+      estado: ['Estado'], estadoAuto: ['Estado (auto)'], pagadoAnio: ['Pagado año'], debeAnio: ['Debe año'],
     },
   },
   conceptos: {
@@ -82,7 +86,7 @@ const ADM_T = {
 };
 
 const ADM_DATE = ['fecha', 'vence', 'fechaLimite', 'creado'];
-const ADM_NUM = ['valor', 'valorTotal', 'recogido', 'pagado', 'saldo', 'anio'].concat(ADMIN.CATS);
+const ADM_NUM = ['valor', 'valorTotal', 'recogido', 'pagado', 'saldo', 'anio', 'pagadoAnio', 'debeAnio'].concat(ADMIN.CATS);
 // referencias que impiden borrar sin force (mejor desactivar)
 const ADM_REFS = {
   jugadores: [['pagos', 'idJug']],
@@ -92,7 +96,7 @@ const ADM_REFS = {
 };
 
 const ADMIN_ROUTES = {
-  adminPing:      p => ({ ok: true, message: 'Euforia admin v1.1 ✓' }),
+  adminPing:      p => ({ ok: true, message: 'Euforia admin v1.2 ✓' }),
   adminCheck:     p => admGuard_(p, u => ({ ok: true, codigo: u.codigo, nombre: u.nombre })),
   adminCatalogos: p => admGuard_(p, u => adminCatalogos_()),
   adminList:      p => admGuard_(p, u => adminList_(p)),
@@ -100,6 +104,7 @@ const ADMIN_ROUTES = {
   adminDelete:    p => admGuard_(p, u => adminDelete_(u, p)),
   adminSaldos:    p => admGuard_(p, u => adminSaldos_(p)),
   adminResumen:   p => admGuard_(p, u => adminResumen_(p)),
+  adminSyncAll:   p => admGuard_(p, u => withLock_(() => ({ ok: true, log: adminSync() }))),
 };
 
 // ══════════════════════════════════════════════════════════════
@@ -108,10 +113,10 @@ const ADMIN_ROUTES = {
 function admAuth_(token) {
   const codigo = readToken_(token);
   if (!codigo) return null;
-  const esAdmin = ADMIN.CODES.some(c => c.toLowerCase() === str_(codigo).toLowerCase());
-  if (!esAdmin) return null;
   const u = findUser_(codigo);
-  return u && u.activo ? u : null;
+  if (!u || !u.activo) return null;
+  const esAdmin = u.admin || ADMIN.CODES.some(c => c.toLowerCase() === str_(codigo).toLowerCase());
+  return esAdmin ? u : null;
 }
 
 function admGuard_(p, fn) {
@@ -382,9 +387,13 @@ function adminSave_(u, p) {
     admLog_(u, antes ? 'editar' : 'crear', tabla, obj.id || id, antes ? admPublic_(antes) : null, obj);
     // CXP: recalcular si cambió un gasto o una cuenta, o un pago de un concepto que financia una cuenta
     if (tabla === 'gastos' || tabla === 'cxp' ||
-        (tabla === 'pagos' && admLoad_('cxp').rows.some(c => str_(c.idConc) && str_(c.idConc) === str_(obj.idConc)))) {
+        (tabla === 'pagos' && admLoad_('cxp').rows.some(c => admIds_(c.idConc).indexOf(str_(obj.idConc)) !== -1))) {
       admSyncCxp_();
     }
+    // Jugadores: estado / pagado / debe del jugador tocado (o de todos si cambió una tarifa)
+    if (tabla === 'pagos') admSyncJugadores_([obj.idJug, antes && antes.idJug]);
+    if (tabla === 'jugadores') admSyncJugadores_([obj.id]);
+    if (tabla === 'conceptos') admSyncJugadores_();
     return { ok: true, tabla, id: obj.id || id, data: obj };
   });
 }
@@ -435,7 +444,8 @@ function admPrepare_(tabla, d, antes, u) {
   if (tabla === 'cxp') {
     if (!str_(m.proveedor)) return { error: 'Falta el proveedor.' };
     if (!(admNum_(m.valorTotal) > 0)) return { error: 'Falta el valor total.' };
-    if (m.idConc && !admLoad_('conceptos').byId[str_(m.idConc)]) return { error: 'El concepto ' + m.idConc + ' no existe.' };
+    const malos = admIds_(m.idConc).filter(x => !admLoad_('conceptos').byId[x]);
+    if (malos.length) return { error: 'No existe el concepto ' + malos.join(', ') + '.' };
     return {
       obj: {
         id: m.id, proveedor: m.proveedor, concepto: m.concepto || '', tipo: m.tipo || '', categoria: m.categoria || '',
@@ -513,6 +523,8 @@ function adminDelete_(u, p) {
     delete _ADM_C[tabla];
     admLog_(u, 'borrar', tabla, id, admPublic_(row), null);
     if (['pagos', 'gastos', 'cxp'].indexOf(tabla) !== -1) admSyncCxp_();
+    if (tabla === 'pagos') admSyncJugadores_([row.idJug]);
+    if (tabla === 'conceptos') admSyncJugadores_();
     return { ok: true, tabla, id };
   });
 }
@@ -529,6 +541,22 @@ function admIndices_() {
   jug.rows.forEach(j => { jByName[admKey_(j.nombre)] = j.id; });
   conc.rows.forEach(c => { cByName[admKey_(c.concepto)] = c.id; });
   return { jug, conc, jByName, cByName };
+}
+
+// "Vence" + días de gracia, al final del día
+function admVence_(vence) {
+  const d = new Date(str_(vence).slice(0, 10) + 'T23:59:59');
+  d.setDate(d.getDate() + (ADMIN.DIAS_GRACIA || 0));
+  return d;
+}
+
+// columna Estado de Jugadores = cambio manual. Vacía → manda el automático.
+function admEstadoManual_(v) {
+  const k = admKey_(v);
+  if (!k) return '';
+  if (k.indexOf('mora') === 0) return 'MORA';
+  if (k.indexOf('habilit') === 0 || k.indexOf('aldia') === 0) return 'AL DÍA';
+  return '';
 }
 
 function adminSaldos_(p) {
@@ -565,7 +593,7 @@ function adminSaldos_(p) {
       if (!tarifa && !pagado && !exo[k]) return;
       const exonerado = !!exo[k];
       const saldo = exonerado ? 0 : Math.max(0, tarifa - pagado);
-      const vencido = !!c.vence && new Date(c.vence + 'T23:59:59') <= ahora;
+      const vencido = !!c.vence && admVence_(c.vence) <= ahora;
       items.push({ idConc: c.id, concepto: c.concepto, tipo: c.tipo, vence: c.vence, tarifa, pagado, exonerado,
                    saldo, vencido, aFavor: Math.max(0, pagado - tarifa) });
     });
@@ -576,7 +604,9 @@ function adminSaldos_(p) {
       pagado: sum(i => i.pagado), saldoAnio: sum(i => i.saldo), saldoVencido: sum(i => (i.vencido ? i.saldo : 0)),
       aFavor: sum(i => i.aFavor),
     };
-    r.estado = r.saldoVencido > 0 ? 'MORA' : 'AL DÍA';
+    r.estadoAuto = !admSi_(j.activo) ? 'INACTIVO' : (r.saldoVencido > 0 ? 'MORA' : 'AL DÍA');
+    r.estadoManual = admEstadoManual_(j.estado);
+    r.estado = r.estadoManual || r.estadoAuto;
     if (p.idJug) r.items = items;
     return r;
   });
@@ -643,14 +673,18 @@ function admCxpEstado_(pagos, gastos) {
   return admLoad_('cxp').rows.map(c => {
     const total = admNum_(c.valorTotal);
     const pagado = gastos.filter(g => str_(g.idCxp) === str_(c.id)).reduce((s, g) => s + admNum_(g.valor), 0);
-    const recogido = c.idConc
-      ? pagos.filter(r => str_(r.idConc) === str_(c.idConc)).reduce((s, r) => s + admNum_(r.valor), 0) : 0;
+    const ids = admIds_(c.idConc);
+    const recogido = ids.length
+      ? pagos.filter(r => ids.indexOf(str_(r.idConc)) !== -1).reduce((s, r) => s + admNum_(r.valor), 0) : 0;
     const saldo = total - pagado;
     const estado = saldo <= 0 ? 'PAGADA' : (c.fechaLimite && str_(c.fechaLimite) < hoy ? 'VENCIDA' : 'PENDIENTE');
     return Object.assign(admPublic_(c), { valorTotal: total, pagado, recogido, saldo, estado,
-                                          faltaRecoger: c.idConc ? Math.max(0, total - recogido) : null });
+                                          faltaRecoger: ids.length ? Math.max(0, total - recogido) : null });
   });
 }
+
+// "C005, C006" → ['C005','C006']
+const admIds_ = v => str_(v).split(/[,;\s]+/).map(x => x.trim()).filter(Boolean);
 
 // deja en la hoja CXP los valores calculados (Recogido, Pagado, Saldo, Estado)
 function admSyncCxp_() {
@@ -661,6 +695,67 @@ function admSyncCxp_() {
     if (!row) return;
     admWriteRow_(t, row._row, { recogido: c.recogido, pagado: c.pagado, saldo: c.saldo, estado: c.estado });
   });
+}
+
+// Escribe en Jugadores: Estado (auto), Pagado año y Debe año del año vigente.
+// ids = lista de ID de jugador; sin ids recalcula a todos.
+function admSyncJugadores_(ids) {
+  ids = (ids || []).map(str_).filter(Boolean);
+  const todos = !ids.length;
+  const s = adminSaldos_({ todos: 'true' });
+  const porId = {};
+  s.jugadores.forEach(r => { porId[r.idJug] = r; });
+  const t = admLoad_('jugadores', true);
+  admEnsure_(t, ['estadoAuto', 'pagadoAnio', 'debeAnio']);
+  const val = r => (r ? [r.estadoAuto, r.pagado, r.saldoAnio] : ['', '', '']);
+  if (!todos) {
+    ids.forEach(id => { const row = t.byId[id]; if (row) admWriteRow_(t, row._row, admObj_(val(porId[id]))); });
+    return;
+  }
+  const n = t.sh.getLastRow() - 1;
+  if (n < 1) return;
+  const idsCol = t.sh.getRange(2, t.map.id + 1, n, 1).getValues();
+  ['estadoAuto', 'pagadoAnio', 'debeAnio'].forEach((f, k) => {
+    const col = idsCol.map(r => [porId[str_(r[0])] ? val(porId[str_(r[0])])[k] : '']);
+    t.sh.getRange(2, t.map[f] + 1, n, 1).setValues(col);
+  });
+  delete _ADM_C.jugadores;
+  return s.anio;
+}
+const admObj_ = v => ({ estadoAuto: v[0], pagadoAnio: v[1], debeAnio: v[2] });
+
+// CXP sin "ID concepto": se vincula sola si el proveedor o la descripción coincide con UN concepto activo
+function admVincularCxp_() {
+  const t = admLoad_('cxp', true);
+  admEnsure_(t, ['idConc']);
+  const activos = admLoad_('conceptos', true).rows.filter(c => admSi_(c.activo));
+  const hechos = [];
+  t.rows.forEach(c => {
+    if (admIds_(c.idConc).length) return;
+    const claves = [c.concepto, c.proveedor].map(admKey_).filter(k => k.length >= 4);
+    for (const k of claves) {
+      const m = activos.filter(x => admKey_(x.concepto).indexOf(k) !== -1);
+      if (m.length === 1) { admWriteRow_(t, c._row, { idConc: m[0].id }); hechos.push(c.id + ' → ' + m[0].id + ' ' + m[0].concepto); return; }
+    }
+  });
+  return hechos;
+}
+
+// Recalcula todo: vínculos y saldos de CXP + estado/pagado/debe de cada jugador.
+// Correr a mano o dejarlo con el disparador diario (adminInstalarDisparador).
+function adminSync() {
+  const v = admVincularCxp_();
+  admSyncCxp_();
+  const anio = admSyncJugadores_();
+  const log = ['CXP vinculadas: ' + (v.length ? v.join(' | ') : 'ninguna nueva'), 'Jugadores recalculados (año ' + anio + ')'];
+  console.log(log.join('\n'));
+  return log;
+}
+
+function adminInstalarDisparador() {
+  ScriptApp.getProjectTriggers().filter(tr => tr.getHandlerFunction() === 'adminSync').forEach(tr => ScriptApp.deleteTrigger(tr));
+  ScriptApp.newTrigger('adminSync').timeBased().everyDays(1).atHour(5).create();
+  console.log('Disparador diario de adminSync creado (5 a. m.)');
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -705,11 +800,8 @@ function adminSetup() {
       log.push(tabla + ': ' + JSON.stringify(llenos) + (tabla === 'pagos' ? ' · filas sin jugador en el catálogo (grupos, etc.): ' + sinMatch : ''));
     });
 
-  // CXP: columna ID concepto + valores calculados
-  const cx = admLoad_('cxp');
-  admEnsure_(cx, ['idConc']);
-  admSyncCxp_();
-  log.push('cxp: columnas calculadas al día');
+  // CXP vinculadas a conceptos + saldos, y estado/pagado/debe de jugadores
+  adminSync().forEach(l => log.push(l));
 
   // Bitácora
   admLog_({ codigo: 'SETUP', nombre: 'adminSetup' }, 'setup', '-', '-', null, { log });

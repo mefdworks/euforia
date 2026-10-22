@@ -118,7 +118,7 @@ select.inp:disabled{opacity:.6;cursor:default}
 // El token del portal del jugador sirve aquí porque el secreto es del proyecto.
 // ══════════════════════════════════════════════════════════════
 const API='https://script.google.com/macros/s/AKfycbwFAw2hDftEJYievRc5-HpbAsL0IMxLjMP14TbwczTkZkKch5ZAG2aGuCoKawYR0GAM/exec';
-const VERSION='admin v1';
+const VERSION='admin v1.2';
 const DEMO=new URLSearchParams(location.search).has('demo');
 const CATS=['OPEN','FEMENINO','U24','SUB17','MASTER','DISCGOLF'];
 
@@ -190,8 +190,8 @@ async function api(params,opts={}){
   }
 }
 const NET_ERR='No pudimos conectar. Revisa tu señal e intenta de nuevo.';
-async function adm(action,extra={}){
-  const r=await api(Object.assign({action,token:SESSION.token},extra));
+async function adm(action,extra={},opts={}){
+  const r=await api(Object.assign({action,token:SESSION.token},extra),opts);
   if(!r.ok&&r.auth===false){logout(r.error);throw new Error(r.error);}
   return r;
 }
@@ -508,7 +508,7 @@ function paintSaldos(){
     <div class="search">${ic('search')}<input id="sal-q" placeholder="Buscar jugador" value="${esc(ST.salQ)}" oninput="ST.salQ=this.value;paintSaldos();this.focus()"></div>
     <div class="chips" style="margin-top:12px">${[['todos','Todos'],['mora','En mora'],['dia','Al día']].map(([k,l])=>`<button class="chip sm ${ST.salF===k?'on':''}" onclick="setSalF('${k}')">${l}</button>`).join('')}</div>
     <p class="cnt">${list.length} jugadores</p>
-    <div class="card rows" style="margin-top:8px">${list.length?list.map(j=>`<button class="row tap" onclick="openJug('${esc(j.idJug)}')"><div class="dot ${j.estado==='MORA'?'due':'paid'}">${j.estado==='MORA'?'!':'✓'}</div><div class="nm"><b>${esc(j.nombre)}</b><small>${esc(j.categorias.join(' · ')||'Sin categoría')} · ${esc(j.codigo||j.idJug)}</small></div><div class="amt ${j.saldoVencido?'due':''}">${j.saldoVencido?fCOP(j.saldoVencido):(j.saldoAnio?fCOP(j.saldoAnio):'Al día')}<small>${j.saldoVencido?'vencido':(j.saldoAnio?'por vencer':'')}</small></div></button>`).join(''):'<div class="empty">Nadie en esta lista</div>'}</div>`;
+    <div class="card rows" style="margin-top:8px">${list.length?list.map(j=>`<button class="row tap" onclick="openJug('${esc(j.idJug)}')"><div class="dot ${j.estado==='MORA'?'due':'paid'}">${j.estado==='MORA'?'!':'✓'}</div><div class="nm"><b>${esc(j.nombre)}${j.estadoManual?`<span class="tag ${j.estadoManual==='MORA'?'bad':'ok'}">Manual</span>`:''}</b><small>${esc(j.categorias.join(' · ')||'Sin categoría')} · ${esc(j.codigo||j.idJug)}</small></div><div class="amt ${j.saldoVencido?'due':''}">${j.saldoVencido?fCOP(j.saldoVencido):(j.saldoAnio?fCOP(j.saldoAnio):'Al día')}<small>${j.saldoVencido?'vencido':(j.saldoAnio?'por vencer':'')}</small></div></button>`).join(''):'<div class="empty">Nadie en esta lista</div>'}</div>`;
   const qi=$('sal-q');if(document.activeElement!==qi&&ST.salQ){qi.focus();qi.setSelectionRange(qi.value.length,qi.value.length);}
 }
 async function openJug(id){
@@ -520,6 +520,12 @@ async function openJug(id){
     if(!s){box.innerHTML+=`<div class="empty">Sin cobros en ${ST.anioS}</div>`;return;}
     ST.saldoJug[id]=Object.fromEntries(s.items.map(i=>[i.idConc,i]));
     box.innerHTML=`<div class="grab"></div><h3>${esc(s.nombre)}</h3>
+      <div class="card picked" style="margin-bottom:12px"><span class="pill ${s.estado==='MORA'?'bad':'ok'}" style="margin-top:0">${s.estado==='MORA'?'En mora':'Al día'}</span><div class="nm"><small>${s.estadoManual?'Puesto a mano. El cálculo dice: '+(s.estadoAuto==='MORA'?'en mora':'al día'):'Calculado con los vencimientos'}</small></div></div>
+      <div class="chips" style="margin:0 0 14px;padding:0;flex-wrap:wrap">
+        ${s.estadoManual!=='AL DÍA'?`<button class="chip sm" onclick="setEstado('${esc(id)}','Habilitado')">Habilitar a mano</button>`:''}
+        ${s.estadoManual!=='MORA'?`<button class="chip sm" onclick="setEstado('${esc(id)}','Mora')">Poner en mora</button>`:''}
+        ${s.estadoManual?`<button class="chip sm" onclick="setEstado('${esc(id)}','')">Volver a automático</button>`:''}
+      </div>
       <div class="kp" style="margin-top:0"><div><small>Cobro ${r.anio}</small><b class="sm">${fCOP(s.cobroAnio)}</b></div><div><small>Pagado</small><b class="sm g">${fCOP(s.pagado)}</b></div><div><small>Debe</small><b class="sm ${s.saldoAnio?'r':''}">${fCOP(s.saldoAnio)}</b></div></div>
       <div class="card rows" style="margin-top:14px">${s.items.length?s.items.map(i=>{const st=i.exonerado?'gift':(i.saldo>0?'due':'paid');
         return `<button class="row tap" onclick="closeSheet($('sh-jug'));regPara('${esc(id)}','${esc(i.idConc)}')"><div class="dot ${st}">${st==='paid'?'✓':(st==='gift'?'★':'!')}</div><div class="nm"><b>${esc(i.concepto)}</b><small>Tarifa ${fCOP(i.tarifa)}${i.vence?' · vence '+fFecha(i.vence):''}${i.vencido&&i.saldo>0?' · vencido':''}</small></div><div class="amt ${st}">${st==='gift'?'Exonerado':(st==='due'?fCOP(i.saldo):fCOP(i.pagado))}</div></button>`;}).join(''):'<div class="empty">Sin cobros con tarifa</div>'}</div>
@@ -527,6 +533,21 @@ async function openJug(id){
       <button class="btn ghost" style="margin-top:10px" onclick="closeSheet($('sh-jug'));verPagos('${esc(id)}')">Ver sus pagos</button>
       <button class="link" onclick="closeSheet($('sh-jug'));editRow('jugadores','${esc(id)}')">Editar datos del jugador</button>`;
   }catch(e){box.innerHTML+=`<div class="empty">${esc(e.message||NET_ERR)}</div>`;}
+}
+async function setEstado(id,v){
+  try{
+    const r=await adm('adminSave',{tabla:'jugadores',data:{id,estado:v}});
+    if(!r.ok)return toast(r.error);
+    toast(v?'Estado puesto a mano: '+v:'Estado automático');
+    if(IX.j[id])IX.j[id].estado=v;
+    SAL=null;openJug(id);if(location.hash==='#saldos')renderSaldos();
+  }catch(e){toast(e.message||NET_ERR);}
+}
+async function syncAll(b){
+  if(b)b.disabled=true;toast('Recalculando cuentas y saldos…');
+  try{const r=await adm('adminSyncAll',{},{timeout:120000});toast(r.ok?'Listo: '+(r.log||[]).join(' · '):r.error);ST.cxp=null;}
+  catch(e){toast(e.message||NET_ERR);}
+  if(b)b.disabled=false;
 }
 function regPara(id,idConc){ST.reg='pago';ST.pick=IX.j[id];go('registrar');setTimeout(()=>pickJug(id,idConc),0);}
 function verPagos(id){ST.mov='pagos';ST.movJug=id;ST.movQ='';ST.movAnio='';go('mov');}
@@ -542,6 +563,7 @@ function renderMas(){
     <div class="sec"><span class="cap">Movimientos</span><div class="card menu" style="margin-top:12px">
       ${m('p','list','Pagos y gastos','Buscar, editar o borrar registros',"ST.movJug='';go('mov')")}
       ${m('c','doc','Cuentas por pagar','Proveedores, saldos y vencimientos',"openCat('cxp')")}
+      ${m('s','refresh','Recalcular todo','Estado, pagado y debe de cada jugador y saldos de CXP',"syncAll(this)")}
     </div></div>
     <div class="sec"><span class="cap">Catálogos</span><div class="card menu" style="margin-top:12px">
       ${m('j','team','Jugadores','Crear, editar categoría, activar o desactivar',"openCat('jugadores')")}
@@ -634,7 +656,7 @@ const OPT={
 const FORMS={
   pagos:[['fecha','Fecha','date'],['idJug','Jugador','select',OPT.jug],['idConc','Concepto','select',OPT.conc],['valor','Valor','money'],['medio','Medio','select',OPT.medio],['categoria','Categoría','select',OPT.cat],['notas','Notas','text']],
   gastos:[['fecha','Fecha','date'],['idTipo','Tipo de gasto','select',OPT.tipo],['categoria','Categoría','select',OPT.cat],['idConc','Bolsa (concepto)','select',OPT.conc],['valor','Valor','money'],['medio','Medio','select',OPT.medio],['idCxp','Abona a CXP','select',OPT.cxp],['soporte','Soporte (link)','text'],['notas','Notas','text']],
-  cxp:[['proveedor','Proveedor','text'],['concepto','Descripción','text'],['tipo','Tipo','select',OPT.tipoConc],['categoria','Categoría','select',OPT.cat],['fechaLimite','Fecha límite','date'],['valorTotal','Valor total','money'],['idConc','Concepto que la financia','select',OPT.conc0],['nota','Nota','text']],
+  cxp:[['proveedor','Proveedor','text'],['concepto','Descripción','text'],['tipo','Tipo','select',OPT.tipoConc],['categoria','Categoría','select',OPT.cat],['fechaLimite','Fecha límite','date'],['valorTotal','Valor total','money'],['idConc','Conceptos que la financian (IDs separados por coma, ej: C005, C006)','text'],['nota','Nota','text']],
   jugadores:[['nombre','Nombre (Apellido Nombre)','text'],['codigo','Código del portal','text'],['categoria','Categoría','select',OPT.cat],['categoria2','Categoría 2','select',OPT.cat],['categoria3','Categoría 3','select',OPT.cat],['activo','Activo','select',OPT.sino],['afiliado','Afiliado','select',OPT.sino],['extranjero','Extranjero','select',OPT.sino],['lesionado','Lesionado','select',OPT.sino],['premios','Premios','select',OPT.sino],['estado','Estado','text']],
   conceptos:[['concepto','Concepto','text'],['tipo','Tipo','select',OPT.tipoConc],['ambito','Ámbito','select',OPT.ambito],['anio','Año','num'],['vence','Vence','date']].concat(CATS.map(k=>[k,'Tarifa '+k,'money'])).concat([['activo','Activo','select',OPT.sino],['nota','Nota','text']]),
   tiposGasto:[['nombre','Proveedor / beneficiario','text'],['clase','Clase','select',OPT.clase],['categoriaFija','Categoría fija','select',OPT.cat],['activo','Activo','select',OPT.sino],['nota','Nota','text']],
@@ -725,7 +747,7 @@ function demoApi(p){
       const items=j=>D.conc.filter(c=>c[j.categoria]).map(c=>{const pg=D.pagos.filter(x=>x.idJug===j.id&&x.idConc===c.id);const pagado=pg.reduce((s,x)=>s+x.valor,0),exo=pg.some(x=>x.medio==='Exoneración');
         return{idConc:c.id,concepto:c.concepto,tipo:c.tipo,vence:c.vence,tarifa:c[j.categoria],pagado,exonerado:exo,saldo:exo?0:Math.max(0,c[j.categoria]-pagado),vencido:c.id==='C016'};});
       const js=D.jug.filter(j=>!p.idJug||j.id===p.idJug).map(j=>{const it=items(j),sv=it.filter(i=>i.vencido).reduce((s,i)=>s+i.saldo,0);
-        return{idJug:j.id,codigo:j.codigo,nombre:j.nombre,categorias:[j.categoria],cobroAnio:it.reduce((s,i)=>s+i.tarifa,0),pagado:it.reduce((s,i)=>s+i.pagado,0),saldoAnio:it.reduce((s,i)=>s+i.saldo,0),saldoVencido:sv,estado:sv?'MORA':'AL DÍA',items:p.idJug?it:undefined};});
+        return{idJug:j.id,codigo:j.codigo,nombre:j.nombre,categorias:[j.categoria],estadoAuto:sv?'MORA':'AL DÍA',estadoManual:'',cobroAnio:it.reduce((s,i)=>s+i.tarifa,0),pagado:it.reduce((s,i)=>s+i.pagado,0),saldoAnio:it.reduce((s,i)=>s+i.saldo,0),saldoVencido:sv,estado:sv?'MORA':'AL DÍA',items:p.idJug?it:undefined};});
       return ok({anio:2027,jugadores:js,totales:{enMora:js.filter(j=>j.estado==='MORA').length,saldoVencido:js.reduce((s,j)=>s+j.saldoVencido,0),saldoAnio:js.reduce((s,j)=>s+j.saldoAnio,0)}});}
     case 'adminSave':return ok({id:p.data.id||(p.tabla==='pagos'?'PG005399':'GS000880')});
     case 'adminDelete':return ok({});

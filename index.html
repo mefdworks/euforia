@@ -259,7 +259,7 @@ function model(r){
   const due=items.filter(i=>i.st==='due');
   const done=items.length-due.length;
   return{
-    nombre:p.nombre||r.nombre||SESSION?.nombre||'',statsName:r.statsName||'',estado:p.estado||'',mora:/mora/i.test(p.estado||''),
+    nombre:p.nombre||r.nombre||SESSION?.nombre||'',statsName:r.statsName||'',admin:!!r.admin,estado:p.estado||'',mora:/mora/i.test(p.estado||''),
     total:p.total||0,sanciones:p.sanciones||0,items,cats,due,
     falta:due.reduce((s,i)=>s+i.costo,0)+(p.sanciones||0),
     pct:items.length?Math.round(done/items.length*100):100,done,
@@ -408,6 +408,8 @@ function renderMas(){
         ${item(LINKS.subirEvidencias,'upload','Subir evidencias físicas','Gimnasio y lanzamiento',1)}
         ${item(LINKS.verEvidencias,'eye','Ver mis evidencias','Revisa que hayan quedado cargadas',1)}
       </div></div>
+    ${DATA&&DATA.admin?`<div class="sec"><div class="sec-h"><span class="cap">Administración</span></div>
+      <div class="card menu">${item('admin.html','wallet','Panel administrativo','Pagos, gastos, saldos y cuentas del club')}</div></div>`:''}
     <div class="sec"><div class="sec-h"><span class="cap">Cuenta</span></div>
       <div class="card menu">
         <button onclick="openInstall()"><span class="ic">${ic('install')}</span><span class="tx"><b>Instalar la app</b><small>Tenla en tu pantalla de inicio</small></span>${ic('chev','i chev')}</button>

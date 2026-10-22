@@ -3,6 +3,7 @@
 //   v5.1: getPortal devuelve statsName (col E de USUARIOS)
 //   v5.2: bienestar con token (el nombre sale de la sesión) + historial propio
 //   v5.3: enruta también las acciones de admin-api.gs (panel administrativo)
+//         getPortal devuelve admin (col F de USUARIOS) para mostrar el acceso al panel
 // Cambios frente a v4:
 //   · Caché de hojas (CacheService) → menos lecturas, menos timeouts
 //   · getPortal: jugador + presupuesto en UNA sola ejecución, con token
@@ -108,6 +109,7 @@ function findUser_(codigo, fresh) {
         pass: str_(data[i][2]),
         activo: str_(data[i][3]).toUpperCase() === 'SI',
         statsName: str_(data[i][4]),   // col E "Nombre stats" (base de estadísticas)
+        admin: str_(data[i][5]).toUpperCase() === 'SI',   // col F "Admin": ve el panel administrativo
       };
     }
   }
@@ -266,7 +268,7 @@ function getPortal(token) {
   if (!codigo) return { ok: false, auth: false, error: 'Tu sesión venció, ingresa de nuevo.' };
   const u = findUser_(codigo);
   if (!u || !u.activo) return { ok: false, auth: false, error: 'Usuario inactivo.' };
-  return { ok: true, nombre: u.nombre, statsName: u.statsName, player: getPlayer(u.nombre), presupuesto: getPresupuesto() };
+  return { ok: true, nombre: u.nombre, statsName: u.statsName, admin: u.admin, player: getPlayer(u.nombre), presupuesto: getPresupuesto() };
 }
 
 // ── Ítems del PRESUPUESTO (fila 1 = título, fila 2 = headers, col A cat, B ítem, C costo) ──
