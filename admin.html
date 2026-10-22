@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Euforia Admin</title>
+<meta name="description" content="Panel administrativo de cuentas de Euforia Ultimate">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#0b0b0c">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Euforia Admin">
+<link rel="icon" type="image/png" href="assets/icons/favicon.png">
+<link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800;900&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/euforia.css">
+<style>
+/* Solo lo que el panel necesita además de euforia.css (mismos tokens y formas) */
+select.inp{appearance:none;-webkit-appearance:none;cursor:pointer;padding-right:24px;background:transparent url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ffffff7a' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 2px center/16px}
+select.inp option,select.inp optgroup{background:#1c1c1f;color:#fff}
+select.inp:disabled{opacity:.6;cursor:default}
+.inp.money{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:1.5rem}
+.sheet{max-height:92dvh;overflow-y:auto}
+.pick{margin:-6px 0 16px;max-height:330px;overflow-y:auto}
+.pick .row{width:100%;text-align:left}
+.picked{display:flex;align-items:center;gap:12px;padding:14px 16px;margin-bottom:18px}
+.picked .nm{flex:1;min-width:0}.picked .nm b{display:block;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.picked .nm small{color:var(--muted);font-size:.8rem}
+.picked button{color:var(--red2);font-weight:600;font-size:.85rem;padding:6px}
+.info{font-size:.85rem;color:var(--soft);margin:-8px 0 16px;line-height:1.5}
+.info b{font-family:'Barlow Condensed',sans-serif;font-size:1rem}
+.medios{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 18px}
+.btn.ghost{background:none;border:1.5px solid var(--line2);box-shadow:none}
+.btn.danger{background:none;border:1.5px solid rgba(255,90,95,.45);color:var(--due);box-shadow:none}
+.duo{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.search{display:flex;align-items:center;gap:10px;height:44px;padding:0 14px;border-radius:14px;background:var(--s1);border:1px solid var(--line);margin-top:12px;color:var(--muted)}
+.search input{flex:1;min-width:0;background:none;border:0;outline:0;color:var(--text);font:500 .95rem 'Barlow',sans-serif}
+.search input::placeholder{color:var(--faint)}
+.last{display:flex;align-items:center;gap:12px;padding:14px 16px;margin-top:14px;border-color:rgba(61,220,132,.3);background:linear-gradient(90deg,rgba(61,220,132,.08),var(--s1))}
+.last .nm{flex:1;min-width:0}.last .nm b{display:block;font-weight:600}.last .nm small{color:var(--muted);font-size:.8rem}
+.last button{color:var(--muted);font-size:.85rem;font-weight:600;padding:6px}
+.tag.ok{background:var(--ok-bg);color:var(--ok)}.tag.bad{background:var(--due-bg);color:var(--due)}.tag.off{background:var(--s3);color:var(--muted)}
+.row.tap{cursor:pointer;width:100%;text-align:left}
+.row .amt small{display:block;font-family:'Barlow',sans-serif;font-weight:500;font-size:.72rem;color:var(--muted)}
+.kp b.sm{font-size:1.25rem}
+.sub-h .back.add{color:var(--red2)}
+.alert{margin-top:12px;padding:14px 16px;display:flex;align-items:center;gap:12px;border-color:rgba(255,90,95,.3);background:linear-gradient(90deg,rgba(255,90,95,.1),var(--s1));width:100%;text-align:left}
+.alert .tx{flex:1}.alert b{font-family:'Barlow Condensed',sans-serif;font-size:1.2rem;color:var(--due);display:block}
+.alert small{color:var(--muted);font-size:.82rem}
+.cnt{color:var(--muted);font-size:.82rem;margin:12px 2px 0}
+</style>
+</head>
+<body>
+
+<!-- ═════════════ BIENVENIDA / LOGIN ═════════════ -->
+<section id="auth">
+  <div class="photo">
+    <span class="logo" role="img" aria-label="Euforia"></span>
+    <h1 class="auth-title">Panel<br>administrativo<em>Cuentas del club</em></h1>
+  </div>
+  <div class="auth-form">
+    <div class="step on" id="st-codigo">
+      <label class="field"><span class="cap">Número de camiseta</span>
+        <input class="inp" id="inp-codigo" inputmode="text" autocomplete="username" placeholder="Ej: E10"></label>
+      <button class="btn" id="b-codigo" onclick="checkCodigo()"><span class="sp"></span><span class="tx">Continuar</span></button>
+      <div class="err" id="err-codigo"></div>
+    </div>
+    <div class="step" id="st-login">
+      <div class="hello">Hola, <span class="who"></span></div>
+      <p class="hint">Ingresa la misma contraseña del portal del jugador.</p>
+      <label class="field"><span class="cap">Contraseña</span>
+        <input class="inp" id="inp-login-pass" type="password" autocomplete="current-password"></label>
+      <button class="btn" id="b-login" onclick="doLogin()"><span class="sp"></span><span class="tx">Entrar</span></button>
+      <button class="link" onclick="step('codigo')">← Cambiar número</button>
+      <div class="err" id="err-login"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ═════════════ APP ═════════════ -->
+<div id="app">
+  <header class="topbar">
+    <span class="logo" role="img" aria-label="Euforia"></span>
+    <button class="avatar" id="avatar" aria-label="Mi cuenta" onclick="go('mas')"></button>
+  </header>
+  <main>
+    <section class="view" id="v-inicio"></section>
+    <section class="view" id="v-registrar"></section>
+    <section class="view" id="v-saldos"></section>
+    <section class="view" id="v-mas"></section>
+    <section class="view" id="v-mov"></section>
+    <section class="view" id="v-cat"></section>
+  </main>
+  <nav class="tabbar" aria-label="Secciones">
+    <button data-v="inicio" onclick="go('inicio')"><svg class="i" data-i="home"></svg>Inicio</button>
+    <button data-v="registrar" onclick="go('registrar')"><svg class="i" data-i="plus"></svg>Registrar</button>
+    <button data-v="saldos" onclick="go('saldos')"><svg class="i" data-i="wallet"></svg>Saldos</button>
+    <button data-v="mas" onclick="go('mas')"><svg class="i" data-i="grid"></svg>Más</button>
+  </nav>
+</div>
+
+<div class="sheet-bg" id="sh-edit" onclick="if(event.target===this)closeSheet(this)">
+  <div class="sheet" id="sheet-edit"></div>
+</div>
+<div class="sheet-bg" id="sh-jug" onclick="if(event.target===this)closeSheet(this)">
+  <div class="sheet" id="sheet-jug"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ══════════════════════════════════════════════════════════════
+// CONFIG
+// Implementación nueva del mismo proyecto de Apps Script (portal-api.gs + admin-api.gs).
+// El token del portal del jugador sirve aquí porque el secreto es del proyecto.
+// ══════════════════════════════════════════════════════════════
+const API='https://script.google.com/macros/s/AKfycbwFAw2hDftEJYievRc5-HpbAsL0IMxLjMP14TbwczTkZkKch5ZAG2aGuCoKawYR0GAM/exec';
+const VERSION='admin v1';
+const DEMO=new URLSearchParams(location.search).has('demo');
+const CATS=['OPEN','FEMENINO','U24','SUB17','MASTER','DISCGOLF'];
+
+const ICONS={
+  home:'<path d="m3 10 9-7 9 7v10a2 2 0 0 1-2 2h-4v-7H9v7H5a2 2 0 0 1-2-2z"/>',
+  wallet:'<rect x="2" y="5" width="20" height="15" rx="3"/><path d="M2 10h20"/><path d="M16 15h2"/>',
+  grid:'<rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/>',
+  plus:'<circle cx="12" cy="12" r="9"/><path d="M12 8v8"/><path d="M8 12h8"/>',
+  add:'<path d="M12 5v14"/><path d="M5 12h14"/>',
+  back:'<path d="m15 18-6-6 6-6"/>',
+  chev:'<path d="m9 18 6-6-6-6"/>',
+  list:'<path d="M8 6h13"/><path d="M8 12h13"/><path d="M8 18h13"/><path d="M3 6h.01"/><path d="M3 12h.01"/><path d="M3 18h.01"/>',
+  team:'<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7"/><path d="M18 14.5a6.5 6.5 0 0 1 3.5 5.5"/>',
+  tag:'<path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><path d="M7.5 7.5h.01"/>',
+  box:'<path d="M21 8 12 3 3 8v8l9 5 9-5z"/><path d="m3 8 9 5 9-5"/><path d="M12 13v8"/>',
+  doc:'<path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6"/><path d="M8 13h8"/><path d="M8 17h5"/>',
+  user:'<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
+  out:'<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/>',
+  search:'<circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/>',
+  refresh:'<path d="M21 12a9 9 0 1 1-2.6-6.4L21 8"/><path d="M21 3v5h-5"/>',
+  alert:'<path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/>',
+};
+const ic=(n,cls='i')=>`<svg class="${cls}" viewBox="0 0 24 24">${ICONS[n]}</svg>`;
+function paintIcons(root=document){root.querySelectorAll('svg[data-i]').forEach(s=>{s.setAttribute('viewBox','0 0 24 24');s.innerHTML=ICONS[s.dataset.i];s.removeAttribute('data-i');});}
+
+// ══════════════════════════════════════════════════════════════
+// UTILIDADES
+// ══════════════════════════════════════════════════════════════
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fCOP=n=>(Number(n)<0?'-':'')+'$'+Math.abs(Math.round(Number(n)||0)).toLocaleString('es-CO');
+const fNum=n=>Math.round(Number(n)||0).toLocaleString('es-CO');
+const pNum=s=>Number(String(s??'').replace(/[^\d]/g,''))||0;
+const first=n=>String(n||'').trim().split(/\s+/).pop();
+const initials=n=>String(n||'').trim().split(/\s+/).slice(0,2).map(w=>w[0]).join('').toUpperCase();
+const norm=s=>String(s??'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase();
+const hoy=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');};
+const fFecha=s=>{if(!s)return'';const [y,m,d]=String(s).slice(0,10).split('-');return d+'/'+m+'/'+y;};
+const MES=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+function toast(msg){const t=$('toast');t.textContent=msg;t.classList.add('show');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('show'),3200);}
+function showErr(id,msg){const e=$(id);e.textContent=msg;e.classList.remove('show');void e.offsetWidth;e.classList.add('show');}
+function busy(id,on){const b=$(id);if(!b)return;b.classList.toggle('load',on);b.disabled=on;}
+function openSheet(el){el.classList.add('open');}
+function closeSheet(el){el.classList.remove('open');}
+function moneyInput(el){const n=pNum(el.value);el.value=n?fNum(n):'';}
+
+const LS={get(k){try{return JSON.parse(localStorage.getItem(k)||'null');}catch{return null;}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch{}},del(k){try{localStorage.removeItem(k);}catch{}}};
+let SESSION=DEMO?{codigo:'E10',nombre:'Admin Demo',token:'demo'}:LS.get('euf_admin_s');
+let CODIGO='';
+
+// ══════════════════════════════════════════════════════════════
+// API — escrituras por POST y sin reintento (para no duplicar)
+// ══════════════════════════════════════════════════════════════
+const POST_ACTIONS=['login','adminSave','adminDelete'];
+const NO_RETRY=['login','adminSave','adminDelete'];
+async function api(params,opts={}){
+  if(DEMO)return demoApi(params);
+  const post=POST_ACTIONS.includes(params.action);
+  const retries=opts.retries??(NO_RETRY.includes(params.action)?0:2);
+  for(let i=0;;i++){
+    const ctrl=new AbortController();const t=setTimeout(()=>ctrl.abort(),opts.timeout||40000);
+    try{
+      const r=post?await fetch(API,{method:'POST',body:JSON.stringify(params),signal:ctrl.signal})
+                  :await fetch(API+'?'+new URLSearchParams(params),{signal:ctrl.signal});
+      const txt=await r.text();
+      try{return JSON.parse(txt);}catch{throw new Error('Respuesta no válida del servidor');}
+    }catch(e){if(i>=retries)throw e;await new Promise(res=>setTimeout(res,1500*(i+1)));}
+    finally{clearTimeout(t);}
+  }
+}
+const NET_ERR='No pudimos conectar. Revisa tu señal e intenta de nuevo.';
+async function adm(action,extra={}){
+  const r=await api(Object.assign({action,token:SESSION.token},extra));
+  if(!r.ok&&r.auth===false){logout(r.error);throw new Error(r.error);}
+  return r;
+}
+
+// ══════════════════════════════════════════════════════════════
+// AUTH (mismo login del portal; además se verifica que el código sea admin)
+// ══════════════════════════════════════════════════════════════
+function step(s){document.querySelectorAll('.step').forEach(e=>e.classList.toggle('on',e.id==='st-'+s));const f=document.querySelector('#st-'+s+' .inp');if(f)setTimeout(()=>f.focus(),50);}
+async function checkCodigo(){
+  const cod=$('inp-codigo').value.trim();
+  if(!cod)return showErr('err-codigo','Ingresa tu número de camiseta');
+  busy('b-codigo',true);
+  try{
+    const r=await api({action:'isFirstTime',codigo:cod});
+    if(!r.ok)showErr('err-codigo',r.error);
+    else if(r.firstTime)showErr('err-codigo','Primero crea tu contraseña en el portal del jugador.');
+    else{CODIGO=cod;document.querySelectorAll('.who').forEach(e=>e.textContent=first(r.nombre));step('login');}
+  }catch{showErr('err-codigo',NET_ERR);}
+  busy('b-codigo',false);
+}
+async function doLogin(){
+  const p=$('inp-login-pass').value.trim();
+  if(!p)return showErr('err-login','Ingresa tu contraseña');
+  busy('b-login',true);
+  try{
+    const r=await api({action:'login',codigo:CODIGO,password:p});
+    if(!r.ok)showErr('err-login',r.error);
+    else{
+      const c=await api({action:'adminCheck',token:r.token});
+      if(c.ok)enter({codigo:r.codigo,nombre:r.nombre,token:r.token});
+      else showErr('err-login','Este número no tiene acceso al panel administrativo.');
+    }
+  }catch{showErr('err-login',NET_ERR);}
+  busy('b-login',false);
+}
+function enter(s){SESSION=s;LS.set('euf_admin_s',SESSION);openApp();}
+function logout(msg){
+  LS.del('euf_admin_s');SESSION=null;CODIGO='';
+  document.body.classList.remove('in');
+  document.querySelectorAll('.inp').forEach(i=>i.value='');
+  step('codigo');if(msg)showErr('err-codigo',msg);
+}
+// Si ya hay sesión del portal del jugador y es admin, se usa sin volver a pedir contraseña
+async function adoptPortalSession(){
+  const s=LS.get('euf_s');
+  if(!s||!s.token)return false;
+  try{const c=await api({action:'adminCheck',token:s.token});if(c.ok){enter({codigo:s.codigo,nombre:s.nombre,token:s.token});return true;}}catch{}
+  return false;
+}
+
+// ══════════════════════════════════════════════════════════════
+// DATOS EN MEMORIA
+// ══════════════════════════════════════════════════════════════
+let CAT=null,IX={};
+const ST={anioR:String(new Date().getFullYear()),anioS:null,reg:'pago',mov:'pagos',movAnio:'',movQ:'',movJug:'',
+          catT:'jugadores',catQ:'',catInact:false,salQ:'',salF:'todos',pick:null,cxp:null,last:null,saldoJug:{}};
+async function loadCat(force){
+  if(CAT&&!force)return CAT;
+  const r=await adm('adminCatalogos');
+  CAT=r;
+  IX.j=Object.fromEntries(r.jugadores.map(x=>[x.id,x]));
+  IX.c=Object.fromEntries(r.conceptos.map(x=>[x.id,x]));
+  IX.t=Object.fromEntries(r.tiposGasto.map(x=>[x.id,x]));
+  const anios=[...new Set(r.conceptos.map(c=>String(c.anio)).filter(Boolean))].sort().reverse();
+  IX.anios=anios;
+  if(!ST.anioS)ST.anioS=String(Math.max(...r.conceptos.filter(c=>si(c.activo)).map(c=>Number(c.anio)||0),new Date().getFullYear()));
+  return CAT;
+}
+async function loadCxp(force){
+  if(ST.cxp&&!force)return ST.cxp;
+  const r=await adm('adminList',{tabla:'cxp'});
+  ST.cxp=r.rows;return ST.cxp;
+}
+const si=v=>String(v||'').toUpperCase()==='SI';
+const lista=k=>(CAT&&CAT.listas&&CAT.listas[k])||[];
+const concActivos=()=>CAT.conceptos.filter(c=>si(c.activo));
+const tiposActivos=()=>CAT.tiposGasto.filter(t=>si(t.activo));
+const catsActivas=()=>CAT.categorias.filter(c=>si(c.activo)).map(c=>c.id);
+
+async function openApp(){
+  document.body.classList.add('in');
+  $('avatar').textContent=initials(SESSION.nombre);
+  renderSkeleton();
+  try{await loadCat();route();}
+  catch(e){if(SESSION)$('v-inicio').innerHTML=`<div class="card empty" style="margin-top:20px">${esc(NET_ERR)}<br><br><button class="btn" onclick="openApp()">Reintentar</button></div>`;}
+}
+
+// ══════════════════════════════════════════════════════════════
+// NAVEGACIÓN
+// ══════════════════════════════════════════════════════════════
+const VIEWS=['inicio','registrar','saldos','mas','mov','cat'];
+const TAB_OF={mov:'mas',cat:'mas'};
+function go(v){if(location.hash!=='#'+v)location.hash=v;else route();window.scrollTo({top:0,behavior:'smooth'});}
+function route(){
+  const v=VIEWS.includes(location.hash.slice(1))?location.hash.slice(1):'inicio';
+  VIEWS.forEach(x=>$('v-'+x).classList.toggle('on',x===v));
+  document.querySelectorAll('.tabbar button').forEach(b=>b.classList.toggle('on',b.dataset.v===(TAB_OF[v]||v)));
+  if(!document.body.classList.contains('in')||!CAT)return;
+  ({inicio:renderInicio,registrar:renderRegistrar,saldos:renderSaldos,mas:renderMas,mov:renderMov,cat:renderCat})[v]();
+}
+addEventListener('hashchange',route);
+function renderSkeleton(){
+  $('v-inicio').innerHTML='<div class="sk" style="height:150px"></div><div class="kp"><div class="sk" style="height:74px"></div><div class="sk" style="height:74px"></div><div class="sk" style="height:74px"></div></div><div class="sk" style="height:200px;margin-top:14px"></div>';
+  renderMas();
+}
+const sk=(h=220)=>`<div class="sk" style="height:${h}px;margin-top:14px"></div>`;
+const yearChips=(sel,fn,extra=[])=>`<div class="chips" style="margin-top:12px">${extra.concat([...new Set(IX.anios.concat(sel&&!extra.includes(sel)?[String(sel)]:[]))].sort().reverse()).map(a=>`<button class="chip sm ${String(a)===String(sel)?'on':''}" onclick="${fn}('${a}')">${a||'Todos'}</button>`).join('')}</div>`;
+
+// ══════════════════════════════════════════════════════════════
+// INICIO: caja, año, mora, CXP, meses, bolsas
+// ══════════════════════════════════════════════════════════════
+function setAnioR(a){ST.anioR=a;renderInicio();}
+async function renderInicio(){
+  const v=$('v-inicio');
+  v.innerHTML=`<div class="page-h"><h2>Cuentas</h2><small>Resumen del club por año</small></div>${yearChips(ST.anioR,'setAnioR')}${sk(150)}${sk(200)}`;
+  try{
+    const [r,s]=await Promise.all([adm('adminResumen',{anio:ST.anioR}),adm('adminSaldos',{anio:ST.anioS})]);
+    if(!r.ok)throw new Error(r.error);
+    const t=r.totales,mx=Math.max(1,...r.meses.map(m=>Math.max(m.ingresos,m.gastos)));
+    const W=320,H=120,bw=9;
+    const bars=r.meses.map((m,i)=>{const x=10+i*25.5,hi=m.ingresos/mx*(H-18),hg=m.gastos/mx*(H-18);
+      return `<rect x="${x}" y="${H-14-hi}" width="${bw}" height="${hi}" rx="2" style="fill:var(--ok)"><title>${MES[i]} ingresos ${fCOP(m.ingresos)}</title></rect>`+
+             `<rect x="${x+bw+1}" y="${H-14-hg}" width="${bw}" height="${hg}" rx="2" style="fill:var(--red2)"><title>${MES[i]} gastos ${fCOP(m.gastos)}</title></rect>`+
+             `<text x="${x+bw}" y="${H-2}" text-anchor="middle" style="fill:var(--muted);font:600 8px Barlow">${MES[i][0]}</text>`;}).join('');
+    const cxp=(r.cxp||[]).filter(c=>c.estado!=='PAGADA');
+    const conc=(r.conceptos||[]).slice(0,8);
+    const tipos=(r.tipos||[]).slice(0,6),mt=Math.max(1,...tipos.map(x=>x.gastos));
+    const mora=s.ok?s.totales:{enMora:0,saldoVencido:0};
+    v.innerHTML=`<div class="page-h"><h2>Cuentas</h2><small>Resumen del club por año</small></div>${yearChips(ST.anioR,'setAnioR')}
+      <div class="card big" style="margin-top:14px"><div class="cap">Caja acumulada</div><div class="v">${fCOP(t.cajaAcumulada)}</div><div class="s">Todo lo que ha entrado menos todo lo que ha salido</div></div>
+      <div class="kp">
+        <div><small>Ingresos ${r.anio}</small><b class="sm">${fCOP(t.ingresos)}</b></div>
+        <div><small>Gastos ${r.anio}</small><b class="sm">${fCOP(t.gastos)}</b></div>
+        <div><small>Resultado</small><b class="sm ${t.resultado<0?'r':'g'}">${fCOP(t.resultado)}</b></div>
+      </div>
+      ${mora.enMora?`<button class="card alert" onclick="ST.salF='mora';go('saldos')"><span class="dot due">!</span><span class="tx"><b>${mora.enMora} en mora · ${fCOP(mora.saldoVencido)}</b><small>Cobros ${ST.anioS} ya vencidos sin pagar</small></span>${ic('chev','i chev')}</button>`:''}
+      <div class="sec"><div class="sec-h"><span class="cap">Mes a mes ${r.anio}</span></div>
+        <div class="card chart"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Ingresos y gastos por mes">${bars}</svg>
+        <div class="leg"><span><i style="background:var(--ok)"></i>Ingresos</span><span><i style="background:var(--red2)"></i>Gastos</span></div></div></div>
+      <div class="sec"><div class="sec-h"><span class="cap">Cuentas por pagar</span><button onclick="openCat('cxp')">Ver todas</button></div>
+        <div class="card rows">${cxp.length?cxp.map(c=>`<button class="row tap" onclick="editCxp('${esc(c.id)}')"><div class="dot ${c.estado==='VENCIDA'?'due':'gift'}">${c.estado==='VENCIDA'?'!':'$'}</div><div class="nm"><b>${esc(c.proveedor)} · ${esc(c.concepto)}</b><small>${c.fechaLimite?'Vence '+fFecha(c.fechaLimite):'Sin fecha'} · pagado ${fCOP(c.pagado)}</small></div><div class="amt ${c.estado==='VENCIDA'?'due':''}">${fCOP(c.saldo)}<small>${esc(c.estado.toLowerCase())}</small></div></button>`).join(''):'<div class="empty">No hay cuentas pendientes</div>'}</div></div>
+      <div class="sec"><div class="sec-h"><span class="cap">Bolsas ${r.anio}</span></div>
+        <div class="card rows">${conc.length?conc.map(c=>`<div class="row"><div class="nm"><b>${esc(c.concepto)}</b><small>Entró ${fCOP(c.ingresos)} · salió ${fCOP(c.gastos)}</small></div><div class="amt ${c.resultado<0?'due':''}">${fCOP(c.resultado)}</div></div>`).join(''):'<div class="empty">Sin movimientos este año</div>'}</div></div>
+      ${tipos.length?`<div class="sec"><div class="sec-h"><span class="cap">En qué se gastó</span></div><div class="card hb">${tipos.map(x=>`<div class="l"><span>${esc(x.tipo)}</span><b>${fCOP(x.gastos)}</b></div><div class="bar"><i data-w="${Math.round(x.gastos/mt*100)}"></i></div>`).join('')}</div></div>`:''}
+      <div class="stamp"><button onclick="renderInicio()" aria-label="Actualizar">${ic('refresh')}</button>Datos del Sheet de cuentas</div>`;
+    animateBars('v-inicio');
+  }catch(e){v.innerHTML+=`<div class="card empty">${esc(e.message||NET_ERR)}</div>`;}
+}
+function animateBars(id){requestAnimationFrame(()=>requestAnimationFrame(()=>$(id).querySelectorAll('.bar i').forEach(b=>b.style.width=b.dataset.w+'%')));}
+
+// ══════════════════════════════════════════════════════════════
+// REGISTRAR: pago o gasto
+// ══════════════════════════════════════════════════════════════
+function setReg(t){ST.reg=t;renderRegistrar();}
+function renderRegistrar(){
+  $('v-registrar').innerHTML=`<div class="page-h"><h2>Registrar</h2><small>Cada registro queda en el Sheet y en la bitácora</small></div>
+    <div class="seg2"><button class="${ST.reg==='pago'?'on':''}" onclick="setReg('pago')">Pago</button><button class="${ST.reg==='gasto'?'on':''}" onclick="setReg('gasto')">Gasto</button></div>
+    <div class="sec" id="reg-body"></div>`;
+  ST.reg==='pago'?formPago():formGasto();
+}
+const medioChips=(id,val,sinExo)=>`<div class="medios" id="${id}">${lista('Medio de pago').filter(m=>!sinExo||m!=='Exoneración').map(m=>`<button class="chip sm ${m===val?'on':''}" data-m="${esc(m)}" onclick="pickMedio('${id}',this)">${esc(m)}</button>`).join('')}</div>`;
+function pickMedio(id,b){$(id).querySelectorAll('.chip').forEach(c=>c.classList.toggle('on',c===b));if(id==='p-medio')onMedio();}
+const medioDe=id=>{const b=$(id)&&$(id).querySelector('.chip.on');return b?b.dataset.m:'';};
+const lastCard=()=>ST.last?`<div class="card last"><div class="dot paid">✓</div><div class="nm"><b>${esc(ST.last.txt)}</b><small>${esc(ST.last.id)} · registrado</small></div><button onclick="undoLast()">Deshacer</button></div>`:'';
+
+function concOptions(sel,soloActivos=true){
+  const list=(soloActivos?concActivos():CAT.conceptos);
+  const byY={};list.forEach(c=>(byY[c.anio||'—']=byY[c.anio||'—']||[]).push(c));
+  return Object.keys(byY).sort().reverse().map(y=>`<optgroup label="${esc(y)}">${byY[y].map(c=>{
+    const s=ST.pick&&ST.saldoJug[ST.pick.id]&&ST.saldoJug[ST.pick.id][c.id];
+    const tx=s?(s.exonerado?' · exonerado':(s.saldo>0?' · debe '+fCOP(s.saldo):' · pagado')):'';
+    return `<option value="${esc(c.id)}" ${c.id===sel?'selected':''}>${esc(c.concepto)}${tx}</option>`;}).join('')}</optgroup>`).join('');
+}
+
+function formPago(){
+  const j=ST.pick;
+  $('reg-body').innerHTML=`
+    ${j?`<div class="card picked"><span class="avatar">${esc(initials(j.nombre))}</span><div class="nm"><b>${esc(j.nombre)}</b><small>${esc([j.categoria,j.categoria2].filter(Boolean).join(' · '))} · ${esc(j.codigo||j.id)}</small></div><button onclick="ST.pick=null;formPago()">Cambiar</button></div>`
+       :`<label class="field"><span class="cap">Jugador</span><input class="inp" id="p-q" placeholder="Busca por nombre o número" oninput="pickList()" autocomplete="off"></label><div class="card rows pick" id="p-list"></div>`}
+    <label class="field"><span class="cap">Concepto</span><select class="inp" id="p-conc" onchange="onConc()"><option value="">Escoge el concepto</option>${concOptions('')}</select></label>
+    <div class="info" id="p-info"></div>
+    <label class="field"><span class="cap">Valor</span><input class="inp money" id="p-valor" inputmode="numeric" placeholder="$0" onblur="moneyInput(this)"></label>
+    <span class="cap">Medio de pago</span>${medioChips('p-medio','Transferencia')}
+    <div class="duo"><label class="field"><span class="cap">Fecha del pago</span><input class="inp" id="p-fecha" type="date" value="${hoy()}"></label>
+    <label class="field"><span class="cap">Categoría</span><select class="inp" id="p-cat">${catsActivas().map(c=>`<option ${j&&j.categoria===c?'selected':''}>${c}</option>`).join('')}</select></label></div>
+    <label class="field"><span class="cap">Notas</span><input class="inp" id="p-notas" placeholder="Opcional"></label>
+    <button class="btn" id="b-pago" onclick="savePago()"><span class="sp"></span><span class="tx">Registrar pago</span></button>
+    <div class="err" id="err-pago"></div>
+    ${lastCard()}`;
+  if(!j)pickList();
+}
+function pickList(){
+  const q=norm($('p-q')?$('p-q').value:'');
+  const list=CAT.jugadores.filter(j=>si(j.activo)&&(!q||norm(j.nombre+' '+(j.codigo||'')+' '+j.id).includes(q))).slice(0,q?12:6);
+  $('p-list').innerHTML=list.length?list.map(j=>`<button class="row tap" onclick="pickJug('${esc(j.id)}')"><span class="avatar" style="width:34px;height:34px;font-size:.75rem">${esc(initials(j.nombre))}</span><div class="nm"><b>${esc(j.nombre)}</b><small>${esc(j.categoria||'')} · ${esc(j.codigo||j.id)}</small></div>${ic('chev','i chev')}</button>`).join(''):'<div class="empty">Nadie con ese nombre. Créalo en Más → Jugadores.</div>';
+}
+async function pickJug(id,idConc){
+  ST.pick=IX.j[id];formPago();
+  if(idConc){$('p-conc').value=idConc;}
+  await loadSaldoJug(id);
+  const sel=$('p-conc');if(!sel)return;const cur=sel.value;
+  sel.innerHTML=`<option value="">Escoge el concepto</option>${concOptions(cur)}`;
+  onConc();
+}
+async function loadSaldoJug(id,force){
+  if(ST.saldoJug[id]&&!force)return;
+  try{
+    const r=await adm('adminSaldos',{anio:ST.anioS,idJug:id});
+    const it=(r.jugadores[0]||{}).items||[];
+    ST.saldoJug[id]=Object.fromEntries(it.map(i=>[i.idConc,i]));
+  }catch{ST.saldoJug[id]={};}
+}
+function onConc(){
+  const id=$('p-conc').value,c=IX.c[id],info=$('p-info');
+  if(!c){info.innerHTML='';return;}
+  const s=ST.pick&&ST.saldoJug[ST.pick.id]&&ST.saldoJug[ST.pick.id][id];
+  if(s){
+    info.innerHTML=s.exonerado?'Este concepto está <b>exonerado</b> para este jugador.'
+      :`Tarifa <b>${fCOP(s.tarifa)}</b> · pagado <b>${fCOP(s.pagado)}</b> · debe <b class="${s.saldo>0?'r':'g'}">${fCOP(s.saldo)}</b>${s.vence?' · vence '+fFecha(s.vence):''}`;
+    if(s.saldo>0&&!pNum($('p-valor').value))$('p-valor').value=fNum(s.saldo);
+  }else{
+    const t=ST.pick?CATS.filter(k=>[ST.pick.categoria,ST.pick.categoria2,ST.pick.categoria3].includes(k)).map(k=>Number(c[k])||0).reduce((a,b)=>a+b,0):0;
+    info.innerHTML=t?`Tarifa <b>${fCOP(t)}</b>`:`${esc(c.tipo||'')}${c.vence?' · vence '+fFecha(c.vence):''} · sin tarifa para su categoría`;
+  }
+}
+function onMedio(){const exo=medioDe('p-medio')==='Exoneración';const v=$('p-valor');v.disabled=exo;if(exo)v.value='';}
+async function savePago(){
+  const data={idJug:ST.pick&&ST.pick.id,idConc:$('p-conc').value,valor:pNum($('p-valor').value),medio:medioDe('p-medio'),
+              fecha:$('p-fecha').value,categoria:$('p-cat').value,notas:$('p-notas').value.trim()};
+  if(!data.idJug)return showErr('err-pago','Escoge el jugador');
+  if(!data.idConc)return showErr('err-pago','Escoge el concepto');
+  if(!data.medio)return showErr('err-pago','Escoge el medio de pago');
+  if(data.medio!=='Exoneración'&&!data.valor)return showErr('err-pago','Escribe el valor');
+  busy('b-pago',true);
+  try{
+    const r=await adm('adminSave',{tabla:'pagos',data});
+    if(!r.ok)showErr('err-pago',r.error);
+    else{
+      ST.last={tabla:'pagos',id:r.id,txt:`${first(ST.pick.nombre)} · ${IX.c[data.idConc].concepto} · ${data.medio==='Exoneración'?'exonerado':fCOP(data.valor)}`};
+      toast('Pago registrado');
+      await loadSaldoJug(ST.pick.id,true);
+      const keep=ST.pick.id;formPago();ST.pick=IX.j[keep];
+      $('p-conc').innerHTML=`<option value="">Escoge el concepto</option>${concOptions('')}`;
+    }
+  }catch(e){showErr('err-pago',e.message||NET_ERR);}
+  busy('b-pago',false);
+}
+async function undoLast(){
+  if(!ST.last||!confirm('¿Borrar '+ST.last.txt+'?'))return;
+  try{
+    const r=await adm('adminDelete',{tabla:ST.last.tabla,id:ST.last.id});
+    if(!r.ok)return toast(r.error);
+    toast('Registro borrado');
+    if(ST.last.tabla==='pagos'&&ST.pick)await loadSaldoJug(ST.pick.id,true);
+    if(ST.last.tabla==='gastos')ST.cxp=null;
+    ST.last=null;renderRegistrar();
+  }catch(e){toast(e.message||NET_ERR);}
+}
+
+async function formGasto(){
+  $('reg-body').innerHTML=sk(300);
+  try{await loadCxp();}catch{}
+  const tipos=tiposActivos(),byC={};tipos.forEach(t=>(byC[t.clase||'Otros']=byC[t.clase||'Otros']||[]).push(t));
+  const cxp=(ST.cxp||[]).filter(c=>c.estado!=='PAGADA');
+  $('reg-body').innerHTML=`
+    <label class="field"><span class="cap">Tipo de gasto</span><select class="inp" id="g-tipo" onchange="onTipo()"><option value="">Escoge el tipo</option>${Object.keys(byC).map(k=>`<optgroup label="${esc(k)}">${byC[k].map(t=>`<option value="${esc(t.id)}">${esc(t.nombre)}</option>`).join('')}</optgroup>`).join('')}</select></label>
+    <label class="field"><span class="cap">Categoría</span><select class="inp" id="g-cat">${catsActivas().map(c=>`<option>${c}</option>`).join('')}</select></label>
+    <label class="field"><span class="cap">Bolsa (concepto que lo paga)</span><select class="inp" id="g-conc"><option value="">Escoge la bolsa</option>${concOptions('')}</select></label>
+    <label class="field"><span class="cap">Valor</span><input class="inp money" id="g-valor" inputmode="numeric" placeholder="$0" onblur="moneyInput(this)"></label>
+    <span class="cap">Medio</span>${medioChips('g-medio','Transferencia',true)}
+    <label class="field"><span class="cap">Fecha</span><input class="inp" id="g-fecha" type="date" value="${hoy()}"></label>
+    <label class="field"><span class="cap">Abona a una cuenta por pagar</span><select class="inp" id="g-cxp"><option value="">No</option>${cxp.map(c=>`<option value="${esc(c.id)}">${esc(c.id)} · ${esc(c.proveedor)} ${esc(c.concepto)} · saldo ${fCOP(c.saldo)}</option>`).join('')}</select></label>
+    <label class="field"><span class="cap">Soporte (link)</span><input class="inp" id="g-soporte" type="url" placeholder="https://"></label>
+    <label class="field"><span class="cap">Notas</span><input class="inp" id="g-notas" placeholder="Opcional"></label>
+    <button class="btn" id="b-gasto" onclick="saveGasto()"><span class="sp"></span><span class="tx">Registrar gasto</span></button>
+    <div class="err" id="err-gasto"></div>
+    ${lastCard()}`;
+}
+function onTipo(){const t=IX.t[$('g-tipo').value],c=$('g-cat');if(t&&t.categoriaFija){c.value=t.categoriaFija;c.disabled=true;}else c.disabled=false;}
+async function saveGasto(){
+  const data={idTipo:$('g-tipo').value,categoria:$('g-cat').value,idConc:$('g-conc').value,valor:pNum($('g-valor').value),
+              medio:medioDe('g-medio'),fecha:$('g-fecha').value,idCxp:$('g-cxp').value,soporte:$('g-soporte').value.trim(),notas:$('g-notas').value.trim()};
+  if(!data.idTipo)return showErr('err-gasto','Escoge el tipo de gasto');
+  if(!data.idConc)return showErr('err-gasto','Escoge la bolsa');
+  if(!data.valor)return showErr('err-gasto','Escribe el valor');
+  busy('b-gasto',true);
+  try{
+    const r=await adm('adminSave',{tabla:'gastos',data});
+    if(!r.ok)showErr('err-gasto',r.error);
+    else{ST.last={tabla:'gastos',id:r.id,txt:`${IX.t[data.idTipo].nombre} · ${fCOP(data.valor)}`};ST.cxp=null;toast('Gasto registrado');formGasto();}
+  }catch(e){showErr('err-gasto',e.message||NET_ERR);}
+  busy('b-gasto',false);
+}
+
+// ══════════════════════════════════════════════════════════════
+// SALDOS por jugador
+// ══════════════════════════════════════════════════════════════
+function setAnioS(a){ST.anioS=a;ST.saldoJug={};renderSaldos();}
+function setSalF(f){ST.salF=f;paintSaldos();}
+let SAL=null;
+async function renderSaldos(){
+  const v=$('v-saldos');
+  v.innerHTML=`<div class="page-h"><h2>Saldos</h2><small>Lo que debe cada jugador activo</small></div>${yearChips(ST.anioS,'setAnioS')}<div id="sal-body">${sk(90)}${sk(300)}</div>`;
+  try{SAL=await adm('adminSaldos',{anio:ST.anioS});paintSaldos();}
+  catch(e){$('sal-body').innerHTML=`<div class="card empty">${esc(e.message||NET_ERR)}</div>`;}
+}
+function paintSaldos(){
+  if(!SAL||!$('sal-body'))return;
+  const q=norm(ST.salQ);
+  const list=SAL.jugadores.filter(j=>(ST.salF==='todos'||(ST.salF==='mora'?j.estado==='MORA':j.estado!=='MORA'))&&(!q||norm(j.nombre+' '+(j.codigo||'')).includes(q)));
+  const t=SAL.totales;
+  $('sal-body').innerHTML=`
+    <div class="kp"><div><small>En mora</small><b class="${t.enMora?'r':''}">${t.enMora}</b></div><div><small>Vencido</small><b class="sm ${t.saldoVencido?'r':''}">${fCOP(t.saldoVencido)}</b></div><div><small>Saldo ${SAL.anio}</small><b class="sm">${fCOP(t.saldoAnio)}</b></div></div>
+    <div class="search">${ic('search')}<input id="sal-q" placeholder="Buscar jugador" value="${esc(ST.salQ)}" oninput="ST.salQ=this.value;paintSaldos();this.focus()"></div>
+    <div class="chips" style="margin-top:12px">${[['todos','Todos'],['mora','En mora'],['dia','Al día']].map(([k,l])=>`<button class="chip sm ${ST.salF===k?'on':''}" onclick="setSalF('${k}')">${l}</button>`).join('')}</div>
+    <p class="cnt">${list.length} jugadores</p>
+    <div class="card rows" style="margin-top:8px">${list.length?list.map(j=>`<button class="row tap" onclick="openJug('${esc(j.idJug)}')"><div class="dot ${j.estado==='MORA'?'due':'paid'}">${j.estado==='MORA'?'!':'✓'}</div><div class="nm"><b>${esc(j.nombre)}</b><small>${esc(j.categorias.join(' · ')||'Sin categoría')} · ${esc(j.codigo||j.idJug)}</small></div><div class="amt ${j.saldoVencido?'due':''}">${j.saldoVencido?fCOP(j.saldoVencido):(j.saldoAnio?fCOP(j.saldoAnio):'Al día')}<small>${j.saldoVencido?'vencido':(j.saldoAnio?'por vencer':'')}</small></div></button>`).join(''):'<div class="empty">Nadie en esta lista</div>'}</div>`;
+  const qi=$('sal-q');if(document.activeElement!==qi&&ST.salQ){qi.focus();qi.setSelectionRange(qi.value.length,qi.value.length);}
+}
+async function openJug(id){
+  const box=$('sheet-jug'),j=IX.j[id]||{};
+  box.innerHTML=`<div class="grab"></div><h3>${esc(j.nombre||id)}</h3>${sk(260)}`;openSheet($('sh-jug'));
+  try{
+    const r=await adm('adminSaldos',{anio:ST.anioS,idJug:id});
+    const s=r.jugadores[0];
+    if(!s){box.innerHTML+=`<div class="empty">Sin cobros en ${ST.anioS}</div>`;return;}
+    ST.saldoJug[id]=Object.fromEntries(s.items.map(i=>[i.idConc,i]));
+    box.innerHTML=`<div class="grab"></div><h3>${esc(s.nombre)}</h3>
+      <div class="kp" style="margin-top:0"><div><small>Cobro ${r.anio}</small><b class="sm">${fCOP(s.cobroAnio)}</b></div><div><small>Pagado</small><b class="sm g">${fCOP(s.pagado)}</b></div><div><small>Debe</small><b class="sm ${s.saldoAnio?'r':''}">${fCOP(s.saldoAnio)}</b></div></div>
+      <div class="card rows" style="margin-top:14px">${s.items.length?s.items.map(i=>{const st=i.exonerado?'gift':(i.saldo>0?'due':'paid');
+        return `<button class="row tap" onclick="closeSheet($('sh-jug'));regPara('${esc(id)}','${esc(i.idConc)}')"><div class="dot ${st}">${st==='paid'?'✓':(st==='gift'?'★':'!')}</div><div class="nm"><b>${esc(i.concepto)}</b><small>Tarifa ${fCOP(i.tarifa)}${i.vence?' · vence '+fFecha(i.vence):''}${i.vencido&&i.saldo>0?' · vencido':''}</small></div><div class="amt ${st}">${st==='gift'?'Exonerado':(st==='due'?fCOP(i.saldo):fCOP(i.pagado))}</div></button>`;}).join(''):'<div class="empty">Sin cobros con tarifa</div>'}</div>
+      <button class="btn" style="margin-top:16px" onclick="closeSheet($('sh-jug'));regPara('${esc(id)}')">Registrar pago</button>
+      <button class="btn ghost" style="margin-top:10px" onclick="closeSheet($('sh-jug'));verPagos('${esc(id)}')">Ver sus pagos</button>
+      <button class="link" onclick="closeSheet($('sh-jug'));editRow('jugadores','${esc(id)}')">Editar datos del jugador</button>`;
+  }catch(e){box.innerHTML+=`<div class="empty">${esc(e.message||NET_ERR)}</div>`;}
+}
+function regPara(id,idConc){ST.reg='pago';ST.pick=IX.j[id];go('registrar');setTimeout(()=>pickJug(id,idConc),0);}
+function verPagos(id){ST.mov='pagos';ST.movJug=id;ST.movQ='';ST.movAnio='';go('mov');}
+
+// ══════════════════════════════════════════════════════════════
+// MÁS
+// ══════════════════════════════════════════════════════════════
+function renderMas(){
+  if(!SESSION)return;
+  const m=(k,ico,t,s,fn,cls='')=>`<button class="${cls}" onclick="${fn}"><span class="ic">${ic(ico)}</span><span class="tx"><b>${t}</b><small>${s}</small></span>${ic('chev','i chev')}</button>`;
+  $('v-mas').innerHTML=`
+    <div class="card me"><span class="avatar">${esc(initials(SESSION.nombre))}</span><div><b>${esc(SESSION.nombre)}</b><small>Administrador · ${esc(SESSION.codigo)}</small></div></div>
+    <div class="sec"><span class="cap">Movimientos</span><div class="card menu" style="margin-top:12px">
+      ${m('p','list','Pagos y gastos','Buscar, editar o borrar registros',"ST.movJug='';go('mov')")}
+      ${m('c','doc','Cuentas por pagar','Proveedores, saldos y vencimientos',"openCat('cxp')")}
+    </div></div>
+    <div class="sec"><span class="cap">Catálogos</span><div class="card menu" style="margin-top:12px">
+      ${m('j','team','Jugadores','Crear, editar categoría, activar o desactivar',"openCat('jugadores')")}
+      ${m('k','tag','Conceptos y tarifas','Cobros por año y tarifa por categoría',"openCat('conceptos')")}
+      ${m('t','box','Tipos de gasto','En qué se gasta y si es administrativo o deportivo',"openCat('tiposGasto')")}
+    </div></div>
+    <div class="sec"><div class="card menu">
+      <a href="index.html"><span class="ic">${ic('user')}</span><span class="tx"><b>Portal del jugador</b><small>Volver a tu portal</small></span>${ic('chev','i chev')}</a>
+      ${m('o','out','Cerrar sesión','Salir del panel',"logout()",'danger')}
+    </div></div>
+    <p class="ver">Euforia · ${VERSION}${DEMO?' · demo':''}</p>`;
+}
+
+// ══════════════════════════════════════════════════════════════
+// MOVIMIENTOS (pagos / gastos)
+// ══════════════════════════════════════════════════════════════
+let MOV=null,movTimer=null;
+function setMov(k,v){ST[k]=v;renderMov();}
+async function renderMov(){
+  const v=$('v-mov'),j=ST.movJug&&IX.j[ST.movJug];
+  v.innerHTML=`<div class="sub-h"><button class="back" onclick="go('mas')" aria-label="Volver">${ic('back')}</button><h2>Movimientos</h2></div>
+    <div class="seg2"><button class="${ST.mov==='pagos'?'on':''}" onclick="setMov('mov','pagos')">Pagos</button><button class="${ST.mov==='gastos'?'on':''}" onclick="setMov('mov','gastos')">Gastos</button></div>
+    ${j&&ST.mov==='pagos'?`<div class="card picked" style="margin:12px 0 0"><span class="avatar">${esc(initials(j.nombre))}</span><div class="nm"><b>${esc(j.nombre)}</b><small>Solo sus pagos</small></div><button onclick="setMov('movJug','')">Quitar</button></div>`:''}
+    ${yearChips(ST.movAnio,'setMovAnio',[''])}
+    <div class="search">${ic('search')}<input id="mov-q" placeholder="Buscar por nombre, concepto o nota" value="${esc(ST.movQ)}" oninput="clearTimeout(movTimer);const x=this.value;movTimer=setTimeout(()=>{ST.movQ=x;loadMov();},450)"></div>
+    <div id="mov-body">${sk(300)}</div>`;
+  loadMov();
+}
+function setMovAnio(a){ST.movAnio=a;renderMov();}
+async function loadMov(){
+  const b=$('mov-body');if(!b)return;b.innerHTML=sk(300);
+  try{
+    const p={tabla:ST.mov,limit:200};if(ST.movAnio)p.anio=ST.movAnio;if(ST.movQ)p.q=ST.movQ;if(ST.movJug&&ST.mov==='pagos')p.idJug=ST.movJug;
+    MOV=await adm('adminList',p);
+    b.innerHTML=`<p class="cnt">${fNum(MOV.total)} registros · ${fCOP(MOV.suma)}${MOV.total>MOV.rows.length?' · se muestran los '+MOV.rows.length+' más recientes':''}</p>
+      <div class="card rows" style="margin-top:8px">${MOV.rows.length?MOV.rows.map(r=>ST.mov==='pagos'
+        ?`<button class="row tap" onclick="editRow('pagos','${esc(r.id)}')"><div class="dot ${r.medio==='Exoneración'?'gift':'paid'}">${r.medio==='Exoneración'?'★':'✓'}</div><div class="nm"><b>${esc(r.jugador)}</b><small>${esc(r.concepto)} · ${fFecha(r.fecha)}${r.notas?' · '+esc(r.notas):''}</small></div><div class="amt ${r.medio==='Exoneración'?'gift':''}">${r.medio==='Exoneración'?'Exonerado':fCOP(r.valor)}<small>${esc(r.medio||r.registro||'')}</small></div></button>`
+        :`<button class="row tap" onclick="editRow('gastos','${esc(r.id)}')"><div class="dot due">−</div><div class="nm"><b>${esc(r.proveedor)}</b><small>${esc(r.rubro)} · ${esc(r.categoria)} · ${fFecha(r.fecha)}${r.notas?' · '+esc(r.notas):''}</small></div><div class="amt">${fCOP(r.valor)}<small>${esc(r.idCxp||r.medio||'')}</small></div></button>`).join(''):'<div class="empty">Sin registros con ese filtro</div>'}</div>`;
+  }catch(e){b.innerHTML=`<div class="card empty">${esc(e.message||NET_ERR)}</div>`;}
+}
+
+// ══════════════════════════════════════════════════════════════
+// CATÁLOGOS (jugadores, conceptos, tipos de gasto, cxp)
+// ══════════════════════════════════════════════════════════════
+const CAT_T={jugadores:'Jugadores',conceptos:'Conceptos',tiposGasto:'Tipos de gasto',cxp:'Cuentas por pagar'};
+function openCat(t){ST.catT=t;ST.catQ='';go('cat');}
+async function renderCat(){
+  const t=ST.catT,v=$('v-cat');
+  v.innerHTML=`<div class="sub-h"><button class="back" onclick="go('mas')" aria-label="Volver">${ic('back')}</button><h2>${CAT_T[t]}</h2><button class="back add" onclick="editRow('${t}',null)" aria-label="Nuevo">${ic('add')}</button></div>
+    <div class="search">${ic('search')}<input id="cat-q" placeholder="Buscar" value="${esc(ST.catQ)}" oninput="ST.catQ=this.value;paintCat()"></div>
+    ${t!=='cxp'?`<div class="chips" style="margin-top:12px"><button class="chip sm ${!ST.catInact?'on':''}" onclick="ST.catInact=false;paintCat()">Activos</button><button class="chip sm ${ST.catInact?'on':''}" onclick="ST.catInact=true;paintCat()">Todos</button></div>`:''}
+    <div id="cat-body">${sk(300)}</div>`;
+  if(t==='cxp'){try{await loadCxp(true);}catch(e){$('cat-body').innerHTML=`<div class="card empty">${esc(e.message||NET_ERR)}</div>`;return;}}
+  paintCat();
+}
+function paintCat(){
+  const t=ST.catT,q=norm(ST.catQ),b=$('cat-body');if(!b)return;
+  document.querySelectorAll('#v-cat .chips .chip').forEach((c,i)=>c.classList.toggle('on',i===(ST.catInact?1:0)));
+  let rows=t==='cxp'?(ST.cxp||[]):CAT[t];
+  if(t!=='cxp'&&!ST.catInact)rows=rows.filter(r=>si(r.activo));
+  if(q)rows=rows.filter(r=>norm(Object.values(r).join(' ')).includes(q));
+  if(t==='conceptos')rows=rows.slice().sort((a,b)=>String(b.anio).localeCompare(String(a.anio))||String(a.id).localeCompare(String(b.id)));
+  const off=r=>t!=='cxp'&&!si(r.activo)?'<span class="tag off">Inactivo</span>':'';
+  const line={
+    jugadores:r=>`<div class="nm"><b>${esc(r.nombre)}${off(r)}</b><small>${esc([r.categoria,r.categoria2,r.categoria3].filter(Boolean).join(' · ')||'Sin categoría')} · ${esc(r.codigo||'sin código')} · ${esc(r.id)}</small></div>`,
+    conceptos:r=>{const tar=CATS.filter(k=>Number(r[k])).map(k=>k+' '+fCOP(r[k]));return `<div class="nm"><b>${esc(r.concepto)}${off(r)}</b><small>${esc(r.tipo||'')} · ${esc(r.ambito||'')}${r.vence?' · vence '+fFecha(r.vence):''} · ${tar.length?esc(tar.slice(0,3).join(' · '))+(tar.length>3?'…':''):'sin tarifa'}</small></div>`;},
+    tiposGasto:r=>`<div class="nm"><b>${esc(r.nombre)}${off(r)}</b><small>${esc(r.clase||'')}${r.categoriaFija?' · '+esc(r.categoriaFija):' · cualquier categoría'}</small></div>`,
+    cxp:r=>`<div class="nm"><b>${esc(r.proveedor)} · ${esc(r.concepto)}</b><small>${r.fechaLimite?'Vence '+fFecha(r.fechaLimite):'Sin fecha'} · total ${fCOP(r.valorTotal)} · pagado ${fCOP(r.pagado)}</small></div><div class="amt ${r.estado==='VENCIDA'?'due':(r.estado==='PAGADA'?'':'')}">${fCOP(r.saldo)}<small>${esc(String(r.estado||'').toLowerCase())}</small></div>`,
+  }[t];
+  b.innerHTML=`<p class="cnt">${rows.length} ${CAT_T[t].toLowerCase()}</p><div class="card rows" style="margin-top:8px">${rows.length?rows.slice(0,300).map(r=>`<button class="row tap" onclick="editRow('${t}','${esc(r.id)}')">${line(r)}${t!=='cxp'?ic('chev','i chev'):''}</button>`).join(''):'<div class="empty">Nada con ese filtro</div>'}</div>`;
+}
+function editCxp(id){editRow('cxp',id);}
+
+// ══════════════════════════════════════════════════════════════
+// EDITOR GENÉRICO (hoja inferior)
+// ══════════════════════════════════════════════════════════════
+const OPT={
+  jug:()=>CAT.jugadores.map(j=>[j.id,j.nombre+' · '+j.id]),
+  conc:()=>CAT.conceptos.map(c=>[c.id,c.concepto]),
+  conc0:()=>[['','—']].concat(CAT.conceptos.map(c=>[c.id,c.concepto])),
+  tipo:()=>CAT.tiposGasto.map(t=>[t.id,t.nombre]),
+  cat:()=>[['','—']].concat(CAT.categorias.map(c=>[c.id,c.id])),
+  medio:()=>lista('Medio de pago').map(x=>[x,x]),
+  tipoConc:()=>[['','—']].concat(lista('Tipo de concepto').map(x=>[x,x])),
+  ambito:()=>lista('Ámbito').map(x=>[x,x]),
+  clase:()=>lista('Clase de gasto').map(x=>[x,x]),
+  sino:()=>[['',''],['SI','SI'],['NO','NO']],
+  cxp:()=>[['','No']].concat((ST.cxp||[]).map(c=>[c.id,c.id+' · '+c.proveedor+' '+c.concepto])),
+};
+const FORMS={
+  pagos:[['fecha','Fecha','date'],['idJug','Jugador','select',OPT.jug],['idConc','Concepto','select',OPT.conc],['valor','Valor','money'],['medio','Medio','select',OPT.medio],['categoria','Categoría','select',OPT.cat],['notas','Notas','text']],
+  gastos:[['fecha','Fecha','date'],['idTipo','Tipo de gasto','select',OPT.tipo],['categoria','Categoría','select',OPT.cat],['idConc','Bolsa (concepto)','select',OPT.conc],['valor','Valor','money'],['medio','Medio','select',OPT.medio],['idCxp','Abona a CXP','select',OPT.cxp],['soporte','Soporte (link)','text'],['notas','Notas','text']],
+  cxp:[['proveedor','Proveedor','text'],['concepto','Descripción','text'],['tipo','Tipo','select',OPT.tipoConc],['categoria','Categoría','select',OPT.cat],['fechaLimite','Fecha límite','date'],['valorTotal','Valor total','money'],['idConc','Concepto que la financia','select',OPT.conc0],['nota','Nota','text']],
+  jugadores:[['nombre','Nombre (Apellido Nombre)','text'],['codigo','Código del portal','text'],['categoria','Categoría','select',OPT.cat],['categoria2','Categoría 2','select',OPT.cat],['categoria3','Categoría 3','select',OPT.cat],['activo','Activo','select',OPT.sino],['afiliado','Afiliado','select',OPT.sino],['extranjero','Extranjero','select',OPT.sino],['lesionado','Lesionado','select',OPT.sino],['premios','Premios','select',OPT.sino],['estado','Estado','text']],
+  conceptos:[['concepto','Concepto','text'],['tipo','Tipo','select',OPT.tipoConc],['ambito','Ámbito','select',OPT.ambito],['anio','Año','num'],['vence','Vence','date']].concat(CATS.map(k=>[k,'Tarifa '+k,'money'])).concat([['activo','Activo','select',OPT.sino],['nota','Nota','text']]),
+  tiposGasto:[['nombre','Proveedor / beneficiario','text'],['clase','Clase','select',OPT.clase],['categoriaFija','Categoría fija','select',OPT.cat],['activo','Activo','select',OPT.sino],['nota','Nota','text']],
+};
+const NOMBRE={pagos:'pago',gastos:'gasto',cxp:'cuenta por pagar',jugadores:'jugador',conceptos:'concepto',tiposGasto:'tipo de gasto'};
+let EDIT=null;
+async function editRow(tabla,id){
+  const box=$('sheet-edit');
+  box.innerHTML=`<div class="grab"></div><h3>${id?'Editar':'Nuevo'} ${NOMBRE[tabla]}</h3>${sk(300)}`;openSheet($('sh-edit'));
+  let row={};
+  try{
+    if((tabla==='gastos'||tabla==='cxp'))await loadCxp();
+    if(id){
+      if(tabla==='jugadores')row=IX.j[id];else if(tabla==='conceptos')row=IX.c[id];else if(tabla==='tiposGasto')row=IX.t[id];
+      else if(tabla==='cxp')row=(ST.cxp||[]).find(c=>c.id===id);
+      else row=(MOV&&MOV.rows.find(r=>r.id===id))||((await adm('adminList',{tabla,q:id,limit:5})).rows.find(r=>r.id===id));
+      if(!row)throw new Error('No encontré '+id);
+    }else row={activo:'SI',fecha:hoy(),anio:ST.anioS,medio:'Transferencia'};
+  }catch(e){box.innerHTML+=`<div class="empty">${esc(e.message||NET_ERR)}</div>`;return;}
+  EDIT={tabla,id};
+  const fld=([k,l,t,o])=>{const v=row[k]??'';
+    if(t==='select')return `<label class="field"><span class="cap">${l}</span><select class="inp" data-k="${k}">${o().map(([val,tx])=>`<option value="${esc(val)}" ${String(val)===String(v)?'selected':''}>${esc(tx)}</option>`).join('')}${v&&!o().some(([val])=>String(val)===String(v))?`<option value="${esc(v)}" selected>${esc(v)}</option>`:''}</select></label>`;
+    if(t==='money')return `<label class="field"><span class="cap">${l}</span><input class="inp money" data-k="${k}" data-t="money" inputmode="numeric" value="${v===''?'':esc(fNum(v))}" onblur="moneyInput(this)" placeholder="$0"></label>`;
+    if(t==='date')return `<label class="field"><span class="cap">${l}</span><input class="inp" data-k="${k}" type="date" value="${esc(String(v).slice(0,10))}"></label>`;
+    if(t==='num')return `<label class="field"><span class="cap">${l}</span><input class="inp" data-k="${k}" inputmode="numeric" value="${esc(v)}"></label>`;
+    return `<label class="field"><span class="cap">${l}</span><input class="inp" data-k="${k}" value="${esc(v)}"></label>`;};
+  const extra=id&&(tabla==='pagos'||tabla==='gastos')?`<p class="hint" style="margin-bottom:14px">${esc(id)}${row.registro?' · registró '+esc(row.registro):''}${row.creado?' · '+fFecha(row.creado):''}</p>`:'';
+  const cxpInfo=tabla==='cxp'&&id?`<p class="hint" style="margin-bottom:14px">Pagado ${fCOP(row.pagado)} · saldo ${fCOP(row.saldo)} · ${esc(String(row.estado||'').toLowerCase())}. Se actualiza solo con los gastos que abonan a ${esc(id)}.</p>`:'';
+  box.innerHTML=`<div class="grab"></div><h3>${id?'Editar':'Nuevo'} ${NOMBRE[tabla]}</h3>${extra}${cxpInfo}
+    <div id="ed-form">${FORMS[tabla].map(fld).join('')}</div>
+    <button class="btn" id="b-ed" onclick="saveEdit()"><span class="sp"></span><span class="tx">Guardar</span></button>
+    ${id?`<button class="btn danger" id="b-del" style="margin-top:10px" onclick="delEdit()"><span class="sp"></span><span class="tx">Borrar</span></button>`:''}
+    <div class="err" id="err-ed"></div>`;
+}
+async function saveEdit(){
+  const data={};if(EDIT.id)data.id=EDIT.id;
+  document.querySelectorAll('#ed-form [data-k]').forEach(el=>{data[el.dataset.k]=el.dataset.t==='money'?(el.value===''?'':pNum(el.value)):el.value.trim();});
+  busy('b-ed',true);
+  try{
+    const r=await adm('adminSave',{tabla:EDIT.tabla,data});
+    if(!r.ok)showErr('err-ed',r.error);
+    else{closeSheet($('sh-edit'));toast(NOMBRE[EDIT.tabla][0].toUpperCase()+NOMBRE[EDIT.tabla].slice(1)+' guardado');await afterChange(EDIT.tabla);}
+  }catch(e){showErr('err-ed',e.message||NET_ERR);}
+  busy('b-ed',false);
+}
+async function delEdit(force){
+  if(!force&&!confirm('¿Borrar este '+NOMBRE[EDIT.tabla]+'? Queda registrado en la bitácora.'))return;
+  busy('b-del',true);
+  try{
+    const r=await adm('adminDelete',{tabla:EDIT.tabla,id:EDIT.id,force:force?'true':''});
+    if(!r.ok&&r.usos){if(confirm(r.error+'\n\n¿Borrar de todas formas?')){busy('b-del',false);return delEdit(true);}}
+    else if(!r.ok)showErr('err-ed',r.error);
+    else{closeSheet($('sh-edit'));toast('Borrado');await afterChange(EDIT.tabla);}
+  }catch(e){showErr('err-ed',e.message||NET_ERR);}
+  busy('b-del',false);
+}
+async function afterChange(tabla){
+  if(['jugadores','conceptos','tiposGasto'].includes(tabla))await loadCat(true);
+  if(tabla==='gastos'||tabla==='cxp')ST.cxp=null;
+  ST.saldoJug={};
+  route();
+}
+
+// ══════════════════════════════════════════════════════════════
+// DEMO (?demo): datos de mentira, no toca el Sheet
+// ══════════════════════════════════════════════════════════════
+function demoApi(p){
+  const D=demoApi.D||(demoApi.D=(()=>{
+    const jug=[['J011','E10','Espinosa Michael','OPEN'],['J001','E26','Bautista Federico','OPEN'],['J039','','Franco Tatiana','FEMENINO'],['J057','','Bedoya Jacobo','SUB17'],['J072','E99','Perdomo Mauricio','MASTER'],['J049','','Peña Samuel','U24']].map(([id,codigo,nombre,categoria])=>({id,codigo,nombre,categoria,activo:'SI'}));
+    const conc=[['C001','Seguro deportivo del club 2027','Afiliación / club','CLUB','2027-02-28',70000],['C002','Cuota sostenimiento LBDV 2027','Afiliación / club','CLUB','2027-02-28',30000],['C016','Mensualidad Ene 2027','Mensualidad','LÍNEA','2027-01-10',130000],['C017','Mensualidad Feb 2027','Mensualidad','LÍNEA','2027-02-10',130000],['C008','Uniformes 2027','Uniformes','LÍNEA','2027-06-30',190000],['C030','General club 2027','General','CLUB','',0]]
+      .map(([id,concepto,tipo,ambito,vence,t])=>Object.assign({id,concepto,tipo,ambito,anio:2027,vence,activo:'SI'},Object.fromEntries(CATS.map(k=>[k,t]))));
+    const tipos=[['T01','CANCHAS OPEN','Deportivo','OPEN'],['T06','ENTRENADORES OPEN','Deportivo','OPEN'],['T22','ADMINISTRADOR','Administrativo',''],['T38','UNIFORMES','Deportivo','']].map(([id,nombre,clase,categoriaFija])=>({id,nombre,clase,categoriaFija,activo:'SI'}));
+    const pagos=[{id:'PG005392',fecha:'2027-01-08',idJug:'J011',jugador:'Espinosa Michael',idConc:'C016',concepto:'Mensualidad Ene 2027',valor:130000,medio:'Transferencia',registro:'Admin Demo',categoria:'OPEN',notas:''},{id:'PG005393',fecha:'2027-01-09',idJug:'J001',jugador:'Bautista Federico',idConc:'C001',concepto:'Seguro deportivo del club 2027',valor:0,medio:'Exoneración',registro:'Admin Demo',categoria:'OPEN',notas:'Lesionado'}];
+    const gastos=[{id:'GS000875',fecha:'2027-01-15',idTipo:'T01',proveedor:'CANCHAS OPEN',rubro:'Mensualidad Ene 2027',idConc:'C016',categoria:'OPEN',valor:450000,medio:'Transferencia',idCxp:'',notas:'Cancha El Country'}];
+    const cxp=[{id:'P01',proveedor:'WFDF',concepto:'Team fee',tipo:'Proceso internacional',categoria:'OPEN',fechaLimite:'2026-11-06',valorTotal:4000000,pagado:1000000,saldo:3000000,estado:'PENDIENTE',idConc:''},{id:'P03',proveedor:'FECODV',concepto:'Afiliaciones',tipo:'Afiliación / club',categoria:'CLUB',fechaLimite:'2027-02-28',valorTotal:4940000,pagado:0,saldo:4940000,estado:'PENDIENTE',idConc:''}];
+    return{jug,conc,tipos,pagos,gastos,cxp};})());
+  const ok=x=>Promise.resolve(Object.assign({ok:true},x));
+  switch(p.action){
+    case 'adminCheck':return ok({codigo:'E10',nombre:'Admin Demo'});
+    case 'adminCatalogos':return ok({jugadores:D.jug,conceptos:D.conc,tiposGasto:D.tipos,categorias:CATS.concat('CLUB').map(id=>({id,activo:'SI'})),
+      listas:{'Medio de pago':['Efectivo','Transferencia','Exoneración'],'Tipo de concepto':['Afiliación / club','Mensualidad','Torneo','Uniformes','General'],'Ámbito':['CLUB','LÍNEA'],'Clase de gasto':['Administrativo','Deportivo']}});
+    case 'adminList':{const rows=p.tabla==='cxp'?D.cxp:(p.tabla==='gastos'?D.gastos:D.pagos.filter(r=>!p.idJug||r.idJug===p.idJug));return ok({rows,total:rows.length,suma:rows.reduce((s,r)=>s+(r.valor||r.valorTotal||0),0)});}
+    case 'adminResumen':return ok({anio:Number(p.anio),totales:{ingresos:41250000,gastos:36980000,resultado:4270000,cajaAcumulada:3556562},
+      meses:MES.map((m,i)=>({mes:i+1,ingresos:i<10?2600000+((i*7919)%1400000):0,gastos:i<10?2300000+((i*6151)%1600000):0})),
+      conceptos:[{concepto:'Mensualidad Ene 2027',ingresos:3630000,gastos:4220336,resultado:-590336},{concepto:'Nacionales 2027',ingresos:4240000,gastos:4390000,resultado:-150000},{concepto:'Uniformes 2027',ingresos:799000,gastos:792000,resultado:7000}],
+      tipos:[{tipo:'ENTRENADORES OPEN',gastos:10255000},{tipo:'CANCHAS OPEN',gastos:8696488},{tipo:'TORNEOS PLAYER FEE',gastos:6140000},{tipo:'PLAN FÍSICO',gastos:1000000}],cxp:D.cxp});
+    case 'adminSaldos':{
+      const items=j=>D.conc.filter(c=>c[j.categoria]).map(c=>{const pg=D.pagos.filter(x=>x.idJug===j.id&&x.idConc===c.id);const pagado=pg.reduce((s,x)=>s+x.valor,0),exo=pg.some(x=>x.medio==='Exoneración');
+        return{idConc:c.id,concepto:c.concepto,tipo:c.tipo,vence:c.vence,tarifa:c[j.categoria],pagado,exonerado:exo,saldo:exo?0:Math.max(0,c[j.categoria]-pagado),vencido:c.id==='C016'};});
+      const js=D.jug.filter(j=>!p.idJug||j.id===p.idJug).map(j=>{const it=items(j),sv=it.filter(i=>i.vencido).reduce((s,i)=>s+i.saldo,0);
+        return{idJug:j.id,codigo:j.codigo,nombre:j.nombre,categorias:[j.categoria],cobroAnio:it.reduce((s,i)=>s+i.tarifa,0),pagado:it.reduce((s,i)=>s+i.pagado,0),saldoAnio:it.reduce((s,i)=>s+i.saldo,0),saldoVencido:sv,estado:sv?'MORA':'AL DÍA',items:p.idJug?it:undefined};});
+      return ok({anio:2027,jugadores:js,totales:{enMora:js.filter(j=>j.estado==='MORA').length,saldoVencido:js.reduce((s,j)=>s+j.saldoVencido,0),saldoAnio:js.reduce((s,j)=>s+j.saldoAnio,0)}});}
+    case 'adminSave':return ok({id:p.data.id||(p.tabla==='pagos'?'PG005399':'GS000880')});
+    case 'adminDelete':return ok({});
+  }
+  return ok({});
+}
+
+// ══════════════════════════════════════════════════════════════
+// ARRANQUE
+// ══════════════════════════════════════════════════════════════
+paintIcons();
+$('inp-codigo').addEventListener('keydown',e=>{if(e.key==='Enter')checkCodigo();});
+$('inp-login-pass').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
+(async()=>{
+  if(SESSION)return openApp();
+  await adoptPortalSession();
+})();
+</script>
+</body>
+</html>
