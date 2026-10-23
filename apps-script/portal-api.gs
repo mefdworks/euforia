@@ -5,6 +5,7 @@
 //   v5.3: enruta también las acciones de admin-api.gs (panel administrativo)
 //         getPortal devuelve admin (col F de USUARIOS) para mostrar el acceso al panel
 //         y, para los códigos de CFG.FUENTE_NUEVA, "Mis pagos" desde el Sheet de cuentas nuevo
+//         registro: si el código no está en USUARIOS pero sí en Jugadores (cuentas), se crea el usuario
 // Cambios frente a v4:
 //   · Caché de hojas (CacheService) → menos lecturas, menos timeouts
 //   · getPortal: jugador + presupuesto en UNA sola ejecución, con token
@@ -212,9 +213,18 @@ function readToken_(token) {
 // ══════════════════════════════════════════════════════════════
 // AUTH
 // ══════════════════════════════════════════════════════════════
+// Si el código no está en USUARIOS pero sí en Jugadores del Sheet de cuentas (activo),
+// se le crea el usuario en ese momento (admin-api.gs: admUsuarioDesdeCuentas_).
+function findOrCreateUser_(codigo, fresh) {
+  const u = findUser_(codigo, fresh);
+  if (u) return u;
+  if (typeof admUsuarioDesdeCuentas_ === 'function' && admUsuarioDesdeCuentas_(codigo)) return findUser_(codigo, true);
+  return null;
+}
+
 function isFirstTime(codigo) {
   if (!codigo) return { ok: false, error: 'Código requerido' };
-  const u = findUser_(codigo);
+  const u = findOrCreateUser_(codigo);
   if (!u) return { ok: false, error: 'Código no encontrado. Verifica con tu capitán.' };
   if (!u.activo) return { ok: false, error: 'Usuario inactivo. Contacta al capitán.' };
   return { ok: true, firstTime: u.pass === '', nombre: u.nombre };
@@ -224,7 +234,7 @@ function register(codigo, password) {
   if (!codigo || !password) return { ok: false, error: 'Datos incompletos' };
   if (str_(password).length < 6) return { ok: false, error: 'Mínimo 6 caracteres' };
   return withLock_(() => {
-    const u = findUser_(codigo, true);
+    const u = findOrCreateUser_(codigo, true);
     if (!u) return { ok: false, error: 'Código no encontrado.' };
     if (!u.activo) return { ok: false, error: 'Usuario inactivo.' };
     if (u.pass !== '') return { ok: false, error: 'Este código ya tiene contraseña.' };

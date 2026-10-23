@@ -333,7 +333,7 @@ async function renderInicio(){
         <div><small>Gastos ${r.anio}</small><b class="sm">${fCOP(t.gastos)}</b></div>
         <div><small>Resultado</small><b class="sm ${t.resultado<0?'r':'g'}">${fCOP(t.resultado)}</b></div>
       </div>
-      ${mora.enMora?`<button class="card alert" onclick="ST.salF='mora';go('saldos')"><span class="dot due">!</span><span class="tx"><b>${mora.enMora} en mora · ${fCOP(mora.saldoVencido)}</b><small>Cobros ${ST.anioS} ya vencidos sin pagar</small></span>${ic('chev','i chev')}</button>`:''}
+      ${mora.enMora?`<button class="card alert" onclick="ST.salF='mora';go('saldos')"><span class="dot due">!</span><span class="tx"><b>${mora.enMora} en mora${mora.saldoVencido?' · '+fCOP(mora.saldoVencido):''}</b><small>${mora.saldoVencido?'Cobros '+ST.anioS+' ya vencidos sin pagar':'Marcados en mora a mano (columna Estado de Jugadores)'}</small></span>${ic('chev','i chev')}</button>`:''}
       <div class="sec"><div class="sec-h"><span class="cap">Mes a mes ${r.anio}</span></div>
         <div class="card chart"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Ingresos y gastos por mes">${bars}</svg>
         <div class="leg"><span><i style="background:#5b8cff"></i>Ingresos</span><span><i style="background:var(--red2)"></i>Gastos</span></div></div></div>

@@ -1,5 +1,5 @@
 // ══════════════════════════════════════════════════════════════
-// EUFORIA PORTAL — API ADMINISTRATIVA v1.7
+// EUFORIA PORTAL — API ADMINISTRATIVA v1.8
 //   Archivo aparte dentro del MISMO proyecto de Apps Script que portal-api.gs
 //   (usa su login, token, findUser_, withLock_ y str_).
 //   Lee y escribe el Sheet "2027 EUFORIA CUENTAS GENERALES" (fuente nueva).
@@ -102,7 +102,7 @@ const ADM_REFS = {
 };
 
 const ADMIN_ROUTES = {
-  adminPing:      p => ({ ok: true, message: 'Euforia admin v1.7 ✓' }),
+  adminPing:      p => ({ ok: true, message: 'Euforia admin v1.8 ✓' }),
   adminCheck:     p => admGuard_(p, u => ({ ok: true, codigo: u.codigo, nombre: u.nombre })),
   adminCatalogos: p => admGuard_(p, u => admCached_('cat', {}, () => adminCatalogos_())),
   adminList:      p => admGuard_(p, u => adminList_(p)),
@@ -806,6 +806,21 @@ function admPorNombre_(rows, nombre, soloSinCodigo) {
   return parcial.length === 1 ? parcial[0] : null;
 }
 const admKey_s_ = s => str_(s).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
+
+// Primer ingreso de alguien que está en Jugadores (activo, con código) pero no en USUARIOS:
+// se agrega a USUARIOS sin contraseña para que la cree. Devuelve true si lo creó.
+function admUsuarioDesdeCuentas_(codigo) {
+  const k = admKey_(codigo);
+  if (!k) return false;
+  const j = admLoad_('jugadores').rows.find(r => admKey_(r.codigo) === k && admSi_(r.activo));
+  if (!j) return false;
+  return withLock_(() => {
+    if (findUser_(codigo, true)) return true;
+    SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SH.USERS).appendRow([str_(j.codigo), j.nombre, '', 'SI']);
+    clearCache_();
+    return true;
+  }) === true;
+}
 
 // Escribe en Jugadores el "Código portal" que falte, cruzando con USUARIOS por nombre
 function admVincularCodigos_() {
