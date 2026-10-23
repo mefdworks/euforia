@@ -1,5 +1,5 @@
 // ══════════════════════════════════════════════════════════════
-// EUFORIA PORTAL — API ADMINISTRATIVA v1.2
+// EUFORIA PORTAL — API ADMINISTRATIVA v1.3
 //   Archivo aparte dentro del MISMO proyecto de Apps Script que portal-api.gs
 //   (usa su login, token, findUser_, withLock_ y str_).
 //   Lee y escribe el Sheet "2027 EUFORIA CUENTAS GENERALES" (fuente nueva).
@@ -7,6 +7,9 @@
 //   Cada cambio queda en la hoja Bitacora.
 //   v1.2: estado automático + pagado/debe en Jugadores, CXP vinculadas a conceptos,
 //         adminSync() para recalcular todo (también con disparador diario).
+//   v1.3: caché (respuestas del panel y datos del portal por jugador). Se invalida al guardar,
+//         al recalcular o al editar el Sheet de cuentas a mano (disparador onEdit).
+//         portalNuevo_(): datos del jugador desde la fuente nueva, con la forma que espera index.html.
 //
 // Primera vez (desde el editor de Apps Script):
 //   1. Ejecutar adminSetup()  → crea las columnas de ID que falten y las llena.
@@ -96,14 +99,14 @@ const ADM_REFS = {
 };
 
 const ADMIN_ROUTES = {
-  adminPing:      p => ({ ok: true, message: 'Euforia admin v1.2 ✓' }),
+  adminPing:      p => ({ ok: true, message: 'Euforia admin v1.3 ✓' }),
   adminCheck:     p => admGuard_(p, u => ({ ok: true, codigo: u.codigo, nombre: u.nombre })),
-  adminCatalogos: p => admGuard_(p, u => adminCatalogos_()),
+  adminCatalogos: p => admGuard_(p, u => admCached_('cat', {}, () => adminCatalogos_())),
   adminList:      p => admGuard_(p, u => adminList_(p)),
   adminSave:      p => admGuard_(p, u => adminSave_(u, p)),
   adminDelete:    p => admGuard_(p, u => adminDelete_(u, p)),
-  adminSaldos:    p => admGuard_(p, u => adminSaldos_(p)),
-  adminResumen:   p => admGuard_(p, u => adminResumen_(p)),
+  adminSaldos:    p => admGuard_(p, u => admCached_('sal', { anio: p.anio, idJug: p.idJug, todos: p.todos }, () => adminSaldos_(p))),
+  adminResumen:   p => admGuard_(p, u => admCached_('res', { anio: p.anio }, () => adminResumen_(p))),
   adminSyncAll:   p => admGuard_(p, u => withLock_(() => ({ ok: true, log: adminSync() }))),
 };
 
@@ -394,6 +397,7 @@ function adminSave_(u, p) {
     if (tabla === 'pagos') admSyncJugadores_([obj.idJug, antes && antes.idJug]);
     if (tabla === 'jugadores') admSyncJugadores_([obj.id]);
     if (tabla === 'conceptos') admSyncJugadores_();
+    admBump_();
     return { ok: true, tabla, id: obj.id || id, data: obj };
   });
 }
@@ -525,6 +529,7 @@ function adminDelete_(u, p) {
     if (['pagos', 'gastos', 'cxp'].indexOf(tabla) !== -1) admSyncCxp_();
     if (tabla === 'pagos') admSyncJugadores_([row.idJug]);
     if (tabla === 'conceptos') admSyncJugadores_();
+    admBump_();
     return { ok: true, tabla, id };
   });
 }
@@ -724,6 +729,40 @@ function admSyncJugadores_(ids) {
 }
 const admObj_ = v => ({ estadoAuto: v[0], pagadoAnio: v[1], debeAnio: v[2] });
 
+// Busca un jugador por nombre sin importar el orden ("Camilo Matallana" = "Matallana Camilo").
+// Exacto por palabras; si no, el único cuyo nombre contiene todas las palabras del otro.
+function admPorNombre_(rows, nombre, soloSinCodigo) {
+  const pal = x => admKey_s_(x).split(' ').filter(Boolean).sort();
+  const p = pal(nombre);
+  if (!p.length) return null;
+  const pool = soloSinCodigo ? rows.filter(r => !str_(r.codigo)) : rows;
+  const exacto = pool.filter(r => pal(r.nombre).join(' ') === p.join(' '));
+  if (exacto.length === 1) return exacto[0];
+  const parcial = pool.filter(r => { const q = pal(r.nombre); const [a, b] = q.length < p.length ? [q, p] : [p, q];
+    return a.length >= 2 && a.every(w => b.indexOf(w) !== -1); });
+  return parcial.length === 1 ? parcial[0] : null;
+}
+const admKey_s_ = s => str_(s).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
+
+// Escribe en Jugadores el "Código portal" que falte, cruzando con USUARIOS por nombre
+function admVincularCodigos_() {
+  const t = admLoad_('jugadores', true);
+  const usuarios = rows_(SH.USERS, true).slice(1).filter(r => str_(r[0]));
+  const conCodigo = {};
+  t.rows.forEach(r => { if (str_(r.codigo)) conCodigo[admKey_(r.codigo)] = true; });
+  const hechos = [], sinPar = [];
+  usuarios.forEach(r => {
+    const cod = str_(r[0]), nom = str_(r[1]);
+    if (conCodigo[admKey_(cod)]) return;
+    const j = admPorNombre_(t.rows, nom, true);
+    if (!j) { sinPar.push(cod + ' ' + nom); return; }
+    admWriteRow_(t, j._row, { codigo: cod });
+    j.codigo = cod; conCodigo[admKey_(cod)] = true;
+    hechos.push(cod + ' → ' + j.id + ' ' + j.nombre);
+  });
+  return { hechos, sinPar };
+}
+
 // CXP sin "ID concepto": se vincula sola si el proveedor o la descripción coincide con UN concepto activo
 function admVincularCxp_() {
   const t = admLoad_('cxp', true);
@@ -744,10 +783,14 @@ function admVincularCxp_() {
 // Recalcula todo: vínculos y saldos de CXP + estado/pagado/debe de cada jugador.
 // Correr a mano o dejarlo con el disparador diario (adminInstalarDisparador).
 function adminSync() {
+  const cods = admVincularCodigos_();
   const v = admVincularCxp_();
   admSyncCxp_();
   const anio = admSyncJugadores_();
-  const log = ['CXP vinculadas: ' + (v.length ? v.join(' | ') : 'ninguna nueva'), 'Jugadores recalculados (año ' + anio + ')'];
+  admBump_();
+  const log = ['Códigos portal escritos: ' + (cods.hechos.length ? cods.hechos.join(' | ') : 'ninguno nuevo'),
+               'Usuarios del portal sin jugador en las cuentas: ' + (cods.sinPar.length ? cods.sinPar.join(' | ') : 'ninguno'),
+               'CXP vinculadas: ' + (v.length ? v.join(' | ') : 'ninguna nueva'), 'Jugadores recalculados (año ' + anio + ')'];
   console.log(log.join('\n'));
   return log;
 }
@@ -755,7 +798,95 @@ function adminSync() {
 function adminInstalarDisparador() {
   ScriptApp.getProjectTriggers().filter(tr => tr.getHandlerFunction() === 'adminSync').forEach(tr => ScriptApp.deleteTrigger(tr));
   ScriptApp.newTrigger('adminSync').timeBased().everyDays(1).atHour(5).create();
-  console.log('Disparador diario de adminSync creado (5 a. m.)');
+  // editar el Sheet de cuentas a mano también borra la caché
+  ScriptApp.getProjectTriggers().filter(tr => tr.getHandlerFunction() === 'admOnEditCuentas').forEach(tr => ScriptApp.deleteTrigger(tr));
+  ScriptApp.newTrigger('admOnEditCuentas').forSpreadsheet(ADMIN.SS_ID).onEdit().create();
+  console.log('Disparadores creados: adminSync diario (5 a. m.) y limpieza de caché al editar el Sheet de cuentas');
+}
+
+function admOnEditCuentas(e) { admBump_(); }
+
+// ══════════════════════════════════════════════════════════════
+// CACHÉ
+//   Las claves llevan una "versión"; al guardar se cambia la versión y todo lo anterior
+//   deja de usarse (vence solo en 6 h). Los valores grandes se parten en trozos de 90 KB.
+// ══════════════════════════════════════════════════════════════
+const ADM_TTL = 21600;
+function admVer_() {
+  const c = CacheService.getScriptCache();
+  let v = c.get('adm_ver');
+  if (!v) { v = String(Date.now()); c.put('adm_ver', v, ADM_TTL); }
+  return v;
+}
+function admBump_() { CacheService.getScriptCache().put('adm_ver', String(Date.now()), ADM_TTL); }
+
+function admCacheGet_(key) {
+  const c = CacheService.getScriptCache();
+  const n = Number(c.get(key + '_n') || 0);
+  if (!n) return null;
+  const keys = []; for (let i = 0; i < n; i++) keys.push(key + '_' + i);
+  const parts = c.getAll(keys);
+  let txt = '';
+  for (const k of keys) { if (parts[k] === undefined || parts[k] === null) return null; txt += parts[k]; }
+  try { return JSON.parse(txt); } catch (_) { return null; }
+}
+function admCachePut_(key, obj) {
+  const txt = JSON.stringify(obj), size = 90000, put = {};
+  let n = 0;
+  for (let i = 0; i < txt.length; i += size) put[key + '_' + (n++)] = txt.slice(i, i + size);
+  put[key + '_n'] = String(n);
+  try { CacheService.getScriptCache().putAll(put, ADM_TTL); } catch (_) { /* si no cabe, se queda sin caché */ }
+}
+function admCached_(name, params, fn) {
+  const key = 'adm_' + admVer_() + '_' + name + '_' + admKey_(JSON.stringify(params || {}));
+  const hit = admCacheGet_(key);
+  if (hit) return hit;
+  const r = fn();
+  if (r && r.ok) admCachePut_(key, r);
+  return r;
+}
+
+// ══════════════════════════════════════════════════════════════
+// PORTAL DEL JUGADOR desde la fuente nueva (piloto por código, ver CFG.FUENTE_NUEVA)
+//   Devuelve { player, presupuesto } con la misma forma que getPlayer/getPresupuesto,
+//   así index.html no cambia. Cobro del año CFG.ANIO_PORTAL (o el vigente).
+//   Ítem pagado → valor; exonerado → 'GIFT'; vencido sin pagar → 0 (debe); por vencer → no se muestra.
+// ══════════════════════════════════════════════════════════════
+const PORTAL_CAT = {
+  'mensualidad': 'MENSUALIDAD', 'afiliacionclub': 'AFILIACIONES', 'torneo': 'TORNEOS', 'uniformes': 'UNIFORMES',
+  'procesointernacional': 'PROCESO INTERNACIONAL', 'sancion': 'SANCIONES',
+};
+function portalNuevo_(u) {
+  const key = 'pj_' + admVer_() + '_' + admKey_(u.codigo);
+  const hit = admCacheGet_(key);
+  if (hit) return hit;
+  const jug = admLoad_('jugadores').rows.find(j => admKey_(j.codigo) === admKey_(u.codigo)) ||
+              admPorNombre_(admLoad_('jugadores').rows, u.nombre, true);
+  if (!jug) {
+    return { player: { ok: false, error: 'Tu código no está en la hoja Jugadores de las cuentas.' },
+             presupuesto: { ok: true, items: [], totalCosto: 0 } };
+  }
+  const s = adminSaldos_({ todos: 'true', idJug: jug.id, anio: (typeof CFG !== 'undefined' && CFG.ANIO_PORTAL) || new Date().getFullYear() });
+  const r = s.jugadores[0] || { items: [], estado: '' };
+  const pagos = {}, pres = [];
+  let total = 0;
+  (r.items || []).forEach(i => {
+    const cat = PORTAL_CAT[admKey_(i.tipo)] || str_(i.tipo).toUpperCase() || 'OTROS';
+    if (i.tarifa) pres.push({ cat, nombre: i.concepto, costo: i.tarifa });
+    let valor = null;
+    if (i.exonerado) valor = 'GIFT';
+    else if (i.pagado > 0) valor = i.pagado;
+    else if (i.vencido) valor = 0;
+    if (valor === null) return;
+    if (valor !== 'GIFT') total += valor;
+    (pagos[cat] = pagos[cat] || []).push({ item: i.concepto, valor });
+  });
+  const out = {
+    player: { ok: true, nombre: jug.nombre, estado: r.estado === 'MORA' ? 'MORA' : 'AL DÍA', total, sanciones: null, pagos },
+    presupuesto: { ok: true, items: pres, totalCosto: pres.reduce((a, b) => a + b.costo, 0) },
+  };
+  admCachePut_(key, out);
+  return out;
 }
 
 // ══════════════════════════════════════════════════════════════

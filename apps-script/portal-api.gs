@@ -4,6 +4,7 @@
 //   v5.2: bienestar con token (el nombre sale de la sesión) + historial propio
 //   v5.3: enruta también las acciones de admin-api.gs (panel administrativo)
 //         getPortal devuelve admin (col F de USUARIOS) para mostrar el acceso al panel
+//         y, para los códigos de CFG.FUENTE_NUEVA, "Mis pagos" desde el Sheet de cuentas nuevo
 // Cambios frente a v4:
 //   · Caché de hojas (CacheService) → menos lecturas, menos timeouts
 //   · getPortal: jugador + presupuesto en UNA sola ejecución, con token
@@ -20,6 +21,10 @@ const CFG = {
   MAX_FAILS: 5,                 // intentos fallidos antes de bloquear
   LOCKOUT_SEC: 600,             // duración del bloqueo
   ALLOW_LEGACY_GETPLAYER: true, // pasar a false cuando index.html v5 esté publicado
+  // Fuente de "Mis pagos": códigos que ya leen el Sheet de cuentas nuevo (piloto).
+  // ['*'] = todos. [] = todos en la fuente vieja (SEGUIMIENTO / PRESUPUESTO).
+  FUENTE_NUEVA: ['*'],
+  ANIO_PORTAL: 0,               // año de cobros que ve el jugador; 0 = el año en curso
 };
 
 const SH = { USERS: 'USUARIOS', SEG: 'SEGUIMIENTO', PRES: 'PRESUPUESTO', BIEN: 'BIENESTAR' };
@@ -268,7 +273,11 @@ function getPortal(token) {
   if (!codigo) return { ok: false, auth: false, error: 'Tu sesión venció, ingresa de nuevo.' };
   const u = findUser_(codigo);
   if (!u || !u.activo) return { ok: false, auth: false, error: 'Usuario inactivo.' };
-  return { ok: true, nombre: u.nombre, statsName: u.statsName, admin: u.admin, player: getPlayer(u.nombre), presupuesto: getPresupuesto() };
+  const nueva = CFG.FUENTE_NUEVA.indexOf('*') !== -1 ||
+    CFG.FUENTE_NUEVA.some(c => c.toLowerCase() === u.codigo.toLowerCase());
+  const d = nueva ? portalNuevo_(u) : { player: getPlayer(u.nombre), presupuesto: getPresupuesto() };
+  return { ok: true, nombre: u.nombre, statsName: u.statsName, admin: u.admin, fuente: nueva ? 'nueva' : 'vieja',
+           player: d.player, presupuesto: d.presupuesto };
 }
 
 // ── Ítems del PRESUPUESTO (fila 1 = título, fila 2 = headers, col A cat, B ítem, C costo) ──
