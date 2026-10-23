@@ -221,7 +221,7 @@ async function doLogin(){
     if(!r.ok)showErr('err-login',r.error);
     else{
       const c=await api({action:'adminCheck',token:r.token});
-      if(c.ok)enter({codigo:r.codigo,nombre:r.nombre,token:r.token});
+      if(c.ok)enter({codigo:r.codigo,nombre:r.nombre,token:r.token,soloAdmin:!!c.soloAdmin});
       else showErr('err-login','Este número no tiene acceso al panel administrativo.');
     }
   }catch{showErr('err-login',NET_ERR);}
@@ -238,7 +238,7 @@ function logout(msg){
 async function adoptPortalSession(){
   const s=LS.get('euf_s');
   if(!s||!s.token)return false;
-  try{const c=await api({action:'adminCheck',token:s.token});if(c.ok){enter({codigo:s.codigo,nombre:s.nombre,token:s.token});return true;}}catch{}
+  try{const c=await api({action:'adminCheck',token:s.token});if(c.ok){enter({codigo:s.codigo,nombre:s.nombre,token:s.token,soloAdmin:!!c.soloAdmin});return true;}}catch{}
   return false;
 }
 
@@ -619,7 +619,7 @@ function renderMas(){
       ${m('t','box','Tipos de gasto','En qué se gasta y si es administrativo o deportivo',"openCat('tiposGasto')")}
     </div></div>
     <div class="sec"><div class="card menu">
-      <a href="index.html"><span class="ic">${ic('user')}</span><span class="tx"><b>Portal del jugador</b><small>Volver a tu portal</small></span>${ic('chev','i chev')}</a>
+      ${SESSION.soloAdmin?'':`<a href="index.html"><span class="ic">${ic('user')}</span><span class="tx"><b>Portal del jugador</b><small>Volver a tu portal</small></span>${ic('chev','i chev')}</a>`}
       ${m('o','out','Cerrar sesión','Salir del panel',"logout()",'danger')}
     </div></div>
     <p class="ver">Euforia · ${VERSION}${DEMO?' · demo':''}</p>`;

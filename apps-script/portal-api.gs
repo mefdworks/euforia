@@ -115,7 +115,9 @@ function findUser_(codigo, fresh) {
         pass: str_(data[i][2]),
         activo: str_(data[i][3]).toUpperCase() === 'SI',
         statsName: str_(data[i][4]),   // col E "Nombre stats" (base de estadísticas)
-        admin: str_(data[i][5]).toUpperCase() === 'SI',   // col F "Admin": ve el panel administrativo
+        // col F "Admin": SI = jugador y admin; SOLO = solo admin (no ve el portal del jugador)
+        admin: ['SI', 'SOLO'].indexOf(str_(data[i][5]).toUpperCase()) !== -1,
+        soloAdmin: str_(data[i][5]).toUpperCase() === 'SOLO',
       };
     }
   }
@@ -286,7 +288,9 @@ function getPortal(token) {
   const nueva = CFG.FUENTE_NUEVA.indexOf('*') !== -1 ||
     CFG.FUENTE_NUEVA.some(c => c.toLowerCase() === u.codigo.toLowerCase());
   const d = nueva ? portalNuevo_(u) : { player: getPlayer(u.nombre), presupuesto: getPresupuesto() };
-  return { ok: true, nombre: u.nombre, statsName: u.statsName, admin: u.admin, fuente: nueva ? 'nueva' : 'vieja',
+  // admin que no juega: sin stats y sin fila en Jugadores → el portal lo manda al panel
+  const soloAdmin = u.soloAdmin || (u.admin && !u.statsName && d.player && d.player.ok === false);
+  return { ok: true, nombre: u.nombre, statsName: u.statsName, admin: u.admin, soloAdmin, fuente: nueva ? 'nueva' : 'vieja',
            player: d.player, presupuesto: d.presupuesto };
 }
 

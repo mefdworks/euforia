@@ -280,6 +280,7 @@ async function refresh(loud){
   try{
     const r=DEMO?demoData():await api({action:'getPortal',token:SESSION.token});
     if(!r.ok&&r.auth===false)return logout(r.error);
+    if(r.soloAdmin&&!DEMO){location.replace('admin.html');return;}   // admin que no juega: directo al panel
     if(!r.ok)throw new Error(r.error);
     LS.set('euf_d_'+SESSION.codigo,{r,ts:Date.now()});
     DATA=model(r);DATA.ts=Date.now();renderAll();
