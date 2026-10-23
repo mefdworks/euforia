@@ -68,7 +68,7 @@ table.t tr.yr-on td{background:rgba(229,56,62,.08)}
 // Usa la sesión del panel (euf_admin_s) o del portal (euf_s) y la valida con adminCheck.
 // Datos: adminHistorico (por año, mes, tipo, categoría) + adminResumen (caja y CXP del año en curso).
 // ══════════════════════════════════════════════════════════════
-const API='https://script.google.com/macros/s/AKfycbwFAw2hDftEJYievRc5-HpbAsL0IMxLjMP14TbwczTkZkKch5ZAG2aGuCoKawYR0GAM/exec';
+const API='https://script.google.com/macros/s/AKfycbwbV5XInsoGL7A_fWG767cGdltf7-h_do8VmYCkcDhU4xskeBKCQ4BkzsrVJGyv44IR/exec';
 const DEMO=new URLSearchParams(location.search).has('demo');
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -128,7 +128,7 @@ function render(){
       <a class="back card" href="admin.html">← Panel</a></header>
     <div class="filters">${['todos'].concat(A.map(a=>String(a.anio)).reverse()).map(y=>`<button class="chip sm ${y===SEL?'on':''}" onclick="setSel('${y}')">${y==='todos'?'Todos los años':y}</button>`).join('')}</div>
     <div class="tiles">
-      <div class="tile2 caja"><small>Caja hoy</small><b>${caja?fCOP(caja.cajaAcumulada):'—'}</b><span>${caja&&caja.cajaCorte?'Desde el saldo al '+caja.cajaCorte.split('-').reverse().join('/'):'Saldo actual'}</span></div>
+      <div class="tile2 caja"><small>Caja hoy</small><b>${caja?fCOP(caja.cajaAcumulada):'—'}</b><span>${caja&&caja.cajaCorte?`Venía ${fM(caja.cajaInicial)} al ${caja.cajaCorte.split('-').reverse().join('/')} · +${fM(caja.cajaIngresos??0)} − ${fM(caja.cajaGastos??0)}`:'Saldo actual'}</span></div>
       <div class="tile2"><small>Ingresos</small><b>${fM(g.ing)}</b><span>${esc(rango)}</span></div>
       <div class="tile2"><small>Gastos</small><b>${fM(g.gas)}</b><span>${esc(rango)}</span></div>
       <div class="tile2"><small>Resultado</small><b class="${res<0?'r':'g'}">${fM(res)}</b><span>${res<0?'Se gastó más de lo que entró':'Entró más de lo que se gastó'}</span></div>

@@ -114,11 +114,11 @@ select.inp:disabled{opacity:.6;cursor:default}
 <script>
 // ══════════════════════════════════════════════════════════════
 // CONFIG
-// Implementación nueva del mismo proyecto de Apps Script (portal-api.gs + admin-api.gs).
-// El token del portal del jugador sirve aquí porque el secreto es del proyecto.
+// Misma implementación que el portal del jugador (un solo proyecto: portal-api.gs + admin-api.gs).
+// Al publicar una versión nueva del script, el portal, el panel y el tablero quedan al día juntos.
 // ══════════════════════════════════════════════════════════════
-const API='https://script.google.com/macros/s/AKfycbwFAw2hDftEJYievRc5-HpbAsL0IMxLjMP14TbwczTkZkKch5ZAG2aGuCoKawYR0GAM/exec';
-const VERSION='admin v1.5';
+const API='https://script.google.com/macros/s/AKfycbwbV5XInsoGL7A_fWG767cGdltf7-h_do8VmYCkcDhU4xskeBKCQ4BkzsrVJGyv44IR/exec';
+const VERSION='admin v1.7';
 const DEMO=new URLSearchParams(location.search).has('demo');
 const CATS=['OPEN','FEMENINO','U24','SUB17','MASTER','DISCGOLF'];
 
@@ -321,7 +321,13 @@ async function renderInicio(){
     const tipos=(r.tipos||[]).slice(0,6),mt=Math.max(1,...tipos.map(x=>x.gastos));
     const mora=s.ok?s.totales:{enMora:0,saldoVencido:0};
     v.innerHTML=`<div class="page-h"><h2>Cuentas</h2><small>Resumen del club por año</small></div>${yearChips(ST.anioR,'setAnioR')}
-      <div class="card big" style="margin-top:14px"><div class="cap">Caja acumulada</div><div class="v">${fCOP(t.cajaAcumulada)}</div><div class="s">${t.cajaCorte?`Saldo oficial al ${fFecha(t.cajaCorte)} (${fCOP(t.cajaInicial)}) más lo que ha entrado y salido después`:'Todo lo que ha entrado menos todo lo que ha salido'}</div></div>
+      <div class="card big" style="margin-top:14px"><div class="cap">Caja hoy</div><div class="v">${fCOP(t.cajaAcumulada)}</div>
+        ${t.cajaCorte?`<div style="margin-top:14px;position:relative;z-index:1;font-size:.88rem">
+          <div style="display:flex;justify-content:space-between;padding:6px 0;color:var(--soft)"><span>Saldo que venía al ${fFecha(t.cajaCorte)}</span><b>${fCOP(t.cajaInicial)}</b></div>
+          <div style="display:flex;justify-content:space-between;padding:6px 0;color:var(--soft)"><span>+ Entró desde entonces</span><b>${fCOP(t.cajaIngresos??t.ingresos)}</b></div>
+          <div style="display:flex;justify-content:space-between;padding:6px 0;color:var(--soft)"><span>− Salió desde entonces</span><b>${fCOP(t.cajaGastos??t.gastos)}</b></div>
+          <div style="display:flex;justify-content:space-between;padding:8px 0 0;margin-top:4px;border-top:1px solid var(--line2)"><span>= Caja hoy</span><b>${fCOP(t.cajaAcumulada)}</b></div>
+        </div>`:'<div class="s">Todo lo que ha entrado menos todo lo que ha salido</div>'}</div>
       <div class="kp">
         <div><small>Ingresos ${r.anio}</small><b class="sm">${fCOP(t.ingresos)}</b></div>
         <div><small>Gastos ${r.anio}</small><b class="sm">${fCOP(t.gastos)}</b></div>
@@ -781,7 +787,7 @@ function demoApi(p){
     case 'adminCatalogos':return ok({jugadores:D.jug,conceptos:D.conc,tiposGasto:D.tipos,categorias:CATS.concat('CLUB').map(id=>({id,activo:'SI'})),
       listas:{'Medio de pago':['Efectivo','Transferencia','Exoneración'],'Tipo de concepto':['Afiliación / club','Mensualidad','Torneo','Uniformes','General'],'Ámbito':['CLUB','LÍNEA'],'Clase de gasto':['Administrativo','Deportivo']}});
     case 'adminList':{const rows=p.tabla==='cxp'?D.cxp:(p.tabla==='gastos'?D.gastos:D.pagos.filter(r=>!p.idJug||r.idJug===p.idJug));return ok({rows,total:rows.length,suma:rows.reduce((s,r)=>s+(r.valor||r.valorTotal||0),0)});}
-    case 'adminResumen':return ok({anio:Number(p.anio),totales:{ingresos:41250000,gastos:36980000,resultado:4270000,cajaAcumulada:3556562,cajaCorte:'2025-12-31',cajaInicial:983827},
+    case 'adminResumen':return ok({anio:Number(p.anio),totales:{ingresos:41250000,gastos:36980000,resultado:4270000,cajaAcumulada:5253827,cajaCorte:'2025-12-31',cajaInicial:983827,cajaIngresos:41250000,cajaGastos:36980000},
       meses:MES.map((m,i)=>({mes:i+1,ingresos:i<10?2600000+((i*7919)%1400000):0,gastos:i<10?2300000+((i*6151)%1600000):0})),
       conceptos:[{concepto:'Mensualidad Ene 2027',ingresos:3630000,gastos:4220336,resultado:-590336},{concepto:'Nacionales 2027',ingresos:4240000,gastos:4390000,resultado:-150000},{concepto:'Uniformes 2027',ingresos:799000,gastos:792000,resultado:7000}],
       tipos:[{tipo:'ENTRENADORES OPEN',gastos:10255000},{tipo:'CANCHAS OPEN',gastos:8696488},{tipo:'TORNEOS PLAYER FEE',gastos:6140000},{tipo:'PLAN FÍSICO',gastos:1000000}],cxp:D.cxp});

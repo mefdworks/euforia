@@ -1,5 +1,5 @@
 // ══════════════════════════════════════════════════════════════
-// EUFORIA PORTAL — API ADMINISTRATIVA v1.6
+// EUFORIA PORTAL — API ADMINISTRATIVA v1.7
 //   Archivo aparte dentro del MISMO proyecto de Apps Script que portal-api.gs
 //   (usa su login, token, findUser_, withLock_ y str_).
 //   Lee y escribe el Sheet "2027 EUFORIA CUENTAS GENERALES" (fuente nueva).
@@ -102,7 +102,7 @@ const ADM_REFS = {
 };
 
 const ADMIN_ROUTES = {
-  adminPing:      p => ({ ok: true, message: 'Euforia admin v1.6 ✓' }),
+  adminPing:      p => ({ ok: true, message: 'Euforia admin v1.7 ✓' }),
   adminCheck:     p => admGuard_(p, u => ({ ok: true, codigo: u.codigo, nombre: u.nombre })),
   adminCatalogos: p => admGuard_(p, u => admCached_('cat', {}, () => adminCatalogos_())),
   adminList:      p => admGuard_(p, u => adminList_(p)),
@@ -671,7 +671,8 @@ function adminResumen_(p) {
   return {
     ok: true, anio: Number(anio),
     totales: { ingresos: ing, gastos: gas, resultado: ing - gas,
-               cajaAcumulada: ADMIN.CAJA_INICIAL.valor + cajaIng - cajaGas, cajaCorte: corte, cajaInicial: ADMIN.CAJA_INICIAL.valor },
+               cajaAcumulada: ADMIN.CAJA_INICIAL.valor + cajaIng - cajaGas, cajaCorte: corte, cajaInicial: ADMIN.CAJA_INICIAL.valor,
+               cajaIngresos: cajaIng, cajaGastos: cajaGas },
     meses: mesIng.map((v, i) => ({ mes: i + 1, ingresos: v, gastos: mesGas[i] })),
     conceptos, tipos: Object.values(porTipo).sort((a, b) => b.gastos - a.gastos),
     categorias: Object.values(porCat), cxp: admCxpEstado_(pagos, gastos),
