@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Euforia · Tablero de cuentas</title>
+<meta name="description" content="Tablero de cuentas del club Euforia (solo administradores)">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#0b0b0c">
+<link rel="icon" type="image/png" href="assets/icons/favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800;900&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/euforia.css">
+<style>
+/* Tablero: mismos tokens del portal; ingresos azul / gastos rojo (par validado para daltonismo) */
+:root{--ing:#5b8cff;--gas:#e5383e}
+body{padding-bottom:40px}
+.wrap{max-width:1180px;margin:0 auto;padding:0 18px}
+.head{display:flex;align-items:center;gap:16px;padding:calc(16px + var(--safe-t)) 0 6px;flex-wrap:wrap}
+.head .logo{width:110px}
+.head h1{font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:clamp(1.6rem,4vw,2.2rem);text-transform:uppercase;line-height:1;flex:1;min-width:200px}
+.head h1 small{display:block;font:500 .85rem 'Barlow',sans-serif;color:var(--muted);text-transform:none;margin-top:4px}
+.head a.back{width:auto;padding:0 14px;height:40px;display:flex;align-items:center;gap:6px;font-size:.85rem;font-weight:600;color:var(--soft)}
+.filters{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0 4px}
+.tiles{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-top:14px}
+.tile2{background:var(--s1);border:1px solid var(--line);border-radius:16px;padding:14px 16px;min-width:0}
+.tile2 small{display:block;color:var(--muted);font-size:.68rem;letter-spacing:1.4px;text-transform:uppercase}
+.tile2 b{display:block;font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:1.75rem;line-height:1.05;margin-top:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tile2 span{display:block;color:var(--muted);font-size:.76rem;margin-top:4px}
+.tile2.caja{background:radial-gradient(120% 120% at 100% 0,rgba(229,56,62,.22),transparent 60%),var(--s1)}
+.grid2{display:grid;grid-template-columns:1.6fr 1fr;gap:14px;margin-top:14px}
+.grid2.eq{grid-template-columns:1fr 1fr}
+.panel{background:var(--s1);border:1px solid var(--line);border-radius:var(--r);padding:16px 18px;min-width:0}
+.panel h2{font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:1.1rem;letter-spacing:1px;text-transform:uppercase}
+.panel h2 small{font:500 .78rem 'Barlow',sans-serif;color:var(--muted);text-transform:none;letter-spacing:0;margin-left:6px}
+.plot{margin-top:10px;width:100%}
+.plot svg{display:block;width:100%;height:auto;overflow:visible}
+.plot text{font-family:'Barlow',sans-serif}
+.lg{display:flex;gap:16px;font-size:.78rem;color:var(--muted);margin-top:8px}
+.lg i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+.notes{list-style:none;display:grid;grid-template-columns:1fr 1fr;gap:10px 22px;font-size:.9rem;line-height:1.45;color:var(--soft);margin-top:10px}
+.notes li{display:flex;gap:10px}.notes li::before{content:'•';color:var(--red2)}
+.notes b{color:var(--text)}
+table.t{width:100%;border-collapse:collapse;margin-top:10px;font-size:.88rem}
+table.t th{font:600 .64rem 'Barlow',sans-serif;letter-spacing:1.4px;text-transform:uppercase;color:var(--muted);text-align:right;padding:8px 6px;border-bottom:1px solid var(--line2)}
+table.t th:first-child,table.t td:first-child{text-align:left}
+table.t td{padding:9px 6px;border-bottom:1px solid var(--line);text-align:right;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:1rem;white-space:nowrap}
+table.t tr:last-child td{border-bottom:0}
+table.t tr.yr-on td{background:rgba(229,56,62,.08)}
+.tip{position:fixed;z-index:90;pointer-events:none;background:#1f1f23;border:1px solid var(--line2);border-radius:10px;padding:8px 11px;font-size:.8rem;line-height:1.4;box-shadow:0 10px 30px rgba(0,0,0,.5);opacity:0;transition:opacity .12s;max-width:240px}
+.tip.on{opacity:1}.tip b{font-family:'Barlow Condensed',sans-serif;font-size:.95rem}
+.tip .sw{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:6px}
+.muted{color:var(--muted)}
+.gate{min-height:80dvh;display:grid;place-items:center;text-align:center;padding:24px}
+.gate .card{padding:26px;max-width:380px}
+@media (max-width:1000px){.tiles{grid-template-columns:repeat(3,1fr)}.grid2,.grid2.eq{grid-template-columns:1fr}.notes{grid-template-columns:1fr}}
+@media (max-width:560px){.tiles{grid-template-columns:repeat(2,1fr)}.tile2 b{font-size:1.45rem}.wrap{padding:0 14px}table.t .hm{display:none}}
+</style>
+</head>
+<body>
+<div class="wrap" id="root"><div class="gate"><div class="sk" style="width:280px;height:120px"></div></div></div>
+<div class="tip" id="tip"></div>
+
+<script>
+// ══════════════════════════════════════════════════════════════
+// Tablero de cuentas · solo administradores
+// Usa la sesión del panel (euf_admin_s) o del portal (euf_s) y la valida con adminCheck.
+// Datos: adminHistorico (por año, mes, tipo, categoría) + adminResumen (caja y CXP del año en curso).
+// ══════════════════════════════════════════════════════════════
+const API='https://script.google.com/macros/s/AKfycbwFAw2hDftEJYievRc5-HpbAsL0IMxLjMP14TbwczTkZkKch5ZAG2aGuCoKawYR0GAM/exec';
+const DEMO=new URLSearchParams(location.search).has('demo');
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fCOP=n=>(Number(n)<0?'−':'')+'$'+Math.abs(Math.round(Number(n)||0)).toLocaleString('es-CO');
+const fM=n=>{const a=Math.abs(n),s=n<0?'−':'';return a>=1e6?s+'$'+(a/1e6).toLocaleString('es-CO',{maximumFractionDigits:1})+'M':(a>=1e3?s+'$'+Math.round(a/1e3)+'k':s+'$'+Math.round(a));};
+const pct=(a,b)=>b?Math.round(a/b*100):0;
+const HIST_HASTA=2026;   // hasta este año los datos vienen de los Excel viejos (sin fecha real de pago)
+const MES=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+const LS={get(k){try{return JSON.parse(localStorage.getItem(k)||'null');}catch{return null;}}};
+const nice=s=>{const t=String(s).toLowerCase();return t.charAt(0).toUpperCase()+t.slice(1);};
+
+async function api(params){
+  if(DEMO)return demoApi(params);
+  for(let i=0;;i++){
+    try{const r=await fetch(API+'?'+new URLSearchParams(params));return JSON.parse(await r.text());}
+    catch(e){if(i>=2)throw e;await new Promise(res=>setTimeout(res,1500*(i+1)));}
+  }
+}
+
+// ── Sesión: solo admins ──
+let TOKEN=null,H=null,R=null,SEL=new URLSearchParams(location.search).get('anio')||'todos';
+async function boot(){
+  if(!DEMO){
+    const cand=[LS.get('euf_admin_s'),LS.get('euf_s')].filter(s=>s&&s.token);
+    for(const s of cand){try{const c=await api({action:'adminCheck',token:s.token});if(c.ok){TOKEN=s.token;break;}}catch{}}
+    if(!TOKEN){$('root').innerHTML=`<div class="gate"><div class="card"><span class="logo" style="width:120px;margin:0 auto 16px"></span><p class="hint">Este tablero es solo para administradores. Entra primero al panel con tu número y contraseña.</p><a class="btn" href="admin.html">Ir al panel</a></div></div>`;return;}
+  }
+  try{
+    const anio=String(new Date().getFullYear());
+    [H,R]=await Promise.all([api({action:'adminHistorico',token:TOKEN}),api({action:'adminResumen',token:TOKEN,anio})]);
+    if(!H.ok)throw new Error(H.error);
+    if(SEL!=='todos'&&!H.anios.some(a=>String(a.anio)===SEL))SEL='todos';
+    render();
+  }catch(e){$('root').innerHTML=`<div class="gate"><div class="card"><p class="hint">${esc(e.message||'No pudimos cargar los datos.')}</p><button class="btn" onclick="location.reload()">Reintentar</button></div></div>`;}
+}
+
+// ── Agregados según el filtro ──
+function agg(){
+  const A=H.anios;
+  const pick=SEL==='todos'?A:A.filter(a=>String(a.anio)===SEL);
+  const sum=(f)=>pick.reduce((s,a)=>s+f(a),0);
+  const merge=k=>{const o={};pick.forEach(a=>Object.entries(a[k]||{}).forEach(([x,v])=>{o[x]=(o[x]||0)+v;}));return o;};
+  return{pick,ing:sum(a=>a.ingresos),gas:sum(a=>a.gastos),jug:SEL==='todos'?Math.round(sum(a=>a.jugadores)/pick.length):sum(a=>a.jugadores),
+    porTipo:merge('porTipo'),porGasto:merge('porGasto'),porCat:merge('porCat'),porCatG:merge('porCatG')};
+}
+
+// ══════════════════════════════════════════════════════════════
+// RENDER
+// ══════════════════════════════════════════════════════════════
+function render(){
+  const A=H.anios,g=agg(),res=g.ing-g.gas,ult=A[A.length-1],caja=R&&R.ok?R.totales:null;
+  const aporte=SEL==='todos'?Math.round(A.reduce((s,a)=>s+a.porJugador,0)/A.length):(g.pick[0]||{}).porJugador||0;
+  const rango=SEL==='todos'?`${A[0].anio}–${ult.anio}`:SEL;
+  $('root').innerHTML=`
+    <header class="head"><span class="logo" role="img" aria-label="Euforia"></span>
+      <h1>Cuentas del club<small>Ingresos, gastos y aportes de los jugadores · ${esc(rango)}${DEMO?' · <b style="color:var(--gold)">datos de demo</b>':''}</small></h1>
+      <a class="back card" href="admin.html">← Panel</a></header>
+    <div class="filters">${['todos'].concat(A.map(a=>String(a.anio)).reverse()).map(y=>`<button class="chip sm ${y===SEL?'on':''}" onclick="setSel('${y}')">${y==='todos'?'Todos los años':y}</button>`).join('')}</div>
+    <div class="tiles">
+      <div class="tile2 caja"><small>Caja hoy</small><b>${caja?fCOP(caja.cajaAcumulada):'—'}</b><span>${caja&&caja.cajaCorte?'Desde el saldo al '+caja.cajaCorte.split('-').reverse().join('/'):'Saldo actual'}</span></div>
+      <div class="tile2"><small>Ingresos</small><b>${fM(g.ing)}</b><span>${esc(rango)}</span></div>
+      <div class="tile2"><small>Gastos</small><b>${fM(g.gas)}</b><span>${esc(rango)}</span></div>
+      <div class="tile2"><small>Resultado</small><b class="${res<0?'r':'g'}">${fM(res)}</b><span>${res<0?'Se gastó más de lo que entró':'Entró más de lo que se gastó'}</span></div>
+      <div class="tile2"><small>Jugadores que pagaron</small><b>${g.jug}</b><span>${SEL==='todos'?'Promedio por año':'En '+SEL}</span></div>
+      <div class="tile2"><small>Aporte por jugador</small><b>${fM(aporte)}</b><span>${SEL==='todos'?'Promedio por año':'En el año'}</span></div>
+    </div>
+    <div class="panel" style="margin-top:14px"><h2>Lo que muestran los números</h2><ul class="notes">${notas(g).map(t=>`<li><span>${t}</span></li>`).join('')}</ul></div>
+    <div class="grid2">
+      <div class="panel"><h2>Ingresos y gastos <small>${SEL==='todos'?'por año':'por mes de '+SEL}</small></h2><div class="plot" id="p-bars"></div>
+        <div class="lg"><span><i style="background:var(--ing)"></i>Ingresos</span><span><i style="background:var(--gas)"></i>Gastos</span></div>
+        ${SEL!=='todos'&&Number(SEL)<=HIST_HASTA?'<p class="muted" style="font-size:.76rem;margin-top:8px;line-height:1.4">Este año viene del Excel viejo: torneos, viajes, uniformes y afiliaciones no tenían fecha y quedan en enero. Desde 2027 cada pago lleva su fecha real.</p>':''}</div>
+      <div class="panel"><h2>Resultado <small>${SEL==='todos'?'por año':'por mes'}</small></h2><div class="plot" id="p-res"></div>
+        <div class="lg"><span><i style="background:var(--ing)"></i>Sobró</span><span><i style="background:var(--gas)"></i>Faltó</span></div></div>
+    </div>
+    <div class="grid2 eq">
+      <div class="panel"><h2>De dónde entra la plata</h2><div class="plot" id="p-ing"></div></div>
+      <div class="panel"><h2>En qué se va</h2><div class="plot" id="p-gas"></div></div>
+    </div>
+    <div class="grid2 eq">
+      <div class="panel"><h2>Por categoría</h2><div class="plot" id="p-cat"></div>
+        <div class="lg"><span><i style="background:var(--ing)"></i>Ingresos</span><span><i style="background:var(--gas)"></i>Gastos</span></div>
+        <p class="muted" id="n-cat" style="font-size:.76rem;margin-top:8px;line-height:1.4"></p></div>
+      <div class="panel"><h2>Año por año</h2>${tabla()}</div>
+    </div>
+    ${cxpPanel()}
+    <p class="ver">Euforia · tablero de cuentas · datos del Sheet de cuentas</p>`;
+  draw();
+}
+function setSel(y){SEL=y;history.replaceState(null,'',y==='todos'?location.pathname+(DEMO?'?demo':''):'?anio='+y+(DEMO?'&demo':''));render();}
+
+function notas(g){
+  const A=H.anios,ult=A[A.length-1],ant=A[A.length-2];
+  if(SEL!=='todos'){
+    const a=g.pick[0],prev=A[A.indexOf(a)-1];
+    const ti=Object.entries(g.porTipo).sort((x,y)=>y[1]-x[1]),tg=Object.entries(g.porGasto).sort((x,y)=>y[1]-x[1]);
+    const mesTop=a.meses.reduce((x,y)=>y.gastos>x.gastos?y:x);
+    return [
+      `En ${a.anio} entraron <b>${fM(a.ingresos)}</b> y salieron <b>${fM(a.gastos)}</b>: ${a.resultado>=0?'sobraron':'faltaron'} <b>${fM(Math.abs(a.resultado))}</b>.`,
+      prev?`Frente a ${prev.anio}, los ingresos ${a.ingresos>=prev.ingresos?'subieron':'bajaron'} <b>${Math.abs(pct(a.ingresos-prev.ingresos,prev.ingresos))}%</b> y los jugadores que pagaron pasaron de ${prev.jugadores} a <b>${a.jugadores}</b>.`:'',
+      ti[0]?`Lo que más entra: <b>${esc(nice(ti[0][0]))}</b> (${pct(ti[0][1],a.ingresos)}%).`:'',
+      tg[0]?`Lo que más pesa en el gasto: <b>${esc(nice(tg[0][0]))}</b> (${pct(tg[0][1],a.gastos)}%).`:'',
+      mesTop.gastos&&a.anio>HIST_HASTA?`El mes de más gasto fue <b>${MES[mesTop.mes-1]}</b> (${fM(mesTop.gastos)}).`:'',
+    ].filter(Boolean);
+  }
+  const T=H.total,best=A.reduce((a,b)=>b.resultado>a.resultado?b:a),worst=A.reduce((a,b)=>b.resultado<a.resultado?b:a);
+  const torneos=T.gastos_top.filter(x=>/^TORNEOS/.test(x.k)).reduce((s,x)=>s+x.v,0);
+  const mens=(T.ingresos_top.find(x=>x.k==='Mensualidad')||{v:0}).v;
+  const huecos=[];for(let y=A[0].anio;y<=ult.anio;y++)if(!A.some(a=>a.anio===y))huecos.push(y);
+  return [
+    `De ${A[0].anio} a ${ult.anio} entraron <b>${fM(T.ingresos)}</b> y salieron <b>${fM(T.gastos)}</b>: el club gasta casi todo lo que recoge.`,
+    `Mejor año: <b>${best.anio}</b> (${fM(best.resultado)}). Más difícil: <b>${worst.anio}</b> (${fM(worst.resultado)}).`,
+    ant?`En ${ult.anio} cada jugador aportó en promedio <b>${fCOP(ult.porJugador)}</b>, ${ult.porJugador>=ant.porJugador?'+':''}${pct(ult.porJugador-ant.porJugador,ant.porJugador)}% frente a ${ant.anio}.`:'',
+    `Las mensualidades son el <b>${pct(mens,T.ingresos)}%</b> de lo que entra; torneos, viajes y uniformes entran y salen casi iguales.`,
+    `Torneos (inscripciones y player fee) se llevan el <b>${pct(torneos,T.gastos)}%</b> del gasto.`,
+    huecos.length?`No hay registro de ${huecos.join(', ')}.`:'',
+  ].filter(Boolean);
+}
+
+function tabla(){
+  const A=H.anios.slice().reverse();
+  return `<table class="t"><thead><tr><th>Año</th><th>Jugadores</th><th class="hm">Aporte prom.</th><th>Ingresos</th><th class="hm">Gastos</th><th>Resultado</th></tr></thead><tbody>
+    ${A.map(a=>`<tr class="${String(a.anio)===SEL?'yr-on':''}"><td>${a.anio}</td><td>${a.jugadores}</td><td class="hm">${fM(a.porJugador)}</td><td>${fM(a.ingresos)}</td><td class="hm">${fM(a.gastos)}</td><td class="${a.resultado<0?'r':'g'}">${fM(a.resultado)}</td></tr>`).join('')}
+  </tbody></table>`;
+}
+
+function cxpPanel(){
+  const c=(R&&R.ok&&R.cxp||[]).filter(x=>x.estado!=='PAGADA');
+  if(!c.length)return '';
+  return `<div class="panel" style="margin-top:14px"><h2>Cuentas por pagar <small>pendientes hoy</small></h2>
+    <table class="t"><thead><tr><th>Proveedor</th><th class="hm">Vence</th><th>Total</th><th class="hm">Recogido</th><th class="hm">Pagado</th><th>Saldo</th></tr></thead><tbody>
+    ${c.map(x=>`<tr><td style="font-family:Barlow;font-weight:600;font-size:.9rem">${esc(x.proveedor)} · ${esc(x.concepto)}</td><td class="hm">${x.fechaLimite?x.fechaLimite.split('-').reverse().join('/'):'—'}</td><td>${fM(x.valorTotal)}</td><td class="hm">${fM(x.recogido||0)}</td><td class="hm">${fM(x.pagado)}</td><td class="${x.estado==='VENCIDA'?'r':''}">${fM(x.saldo)}</td></tr>`).join('')}
+    </tbody></table></div>`;
+}
+
+// ══════════════════════════════════════════════════════════════
+// GRÁFICAS (SVG propio; ancho real del contenedor, se redibuja al cambiar el tamaño)
+// ══════════════════════════════════════════════════════════════
+function draw(){
+  const g=agg(),A=H.anios;
+  const series=SEL==='todos'?A.map(a=>({l:String(a.anio),i:a.ingresos,g:a.gastos})):(g.pick[0].meses.map(m=>({l:MES[m.mes-1],i:m.ingresos,g:m.gastos})));
+  grouped('p-bars',series,240);
+  diverging('p-res',series.map(s=>({l:s.l,v:s.i-s.g})),240);
+  hbars('p-ing',Object.entries(g.porTipo).map(([k,v])=>({k:nice(k),v})),'var(--ing)',g.ing);
+  hbars('p-gas',Object.entries(g.porGasto).map(([k,v])=>({k:nice(k),v})),'var(--gas)',g.gas,7);
+  // Hasta 2026 los gastos de Femenino y juveniles se llevaban juntos en la hoja KOI: se agrupan para comparar parejo
+  const ci={...g.porCat},cg={...g.porCatG},KOI=['FEMENINO','SUB17','U24','KOI'],juntar=(cg.KOI||0)>0;
+  if(juntar){const L='FEM + JUVENILES';[ci,cg].forEach(o=>{o[L]=KOI.reduce((s,k)=>s+(o[k]||0),0);KOI.forEach(k=>delete o[k]);});}
+  const cats=[...new Set(Object.keys(ci).concat(Object.keys(cg)))].filter(k=>k&&k!=='SIN CATEGORÍA');
+  hgrouped('p-cat',cats.map(k=>({k,i:ci[k]||0,g:cg[k]||0})).sort((a,b)=>(b.i+b.g)-(a.i+a.g)));
+  $('n-cat').textContent=juntar?'Hasta 2026 los gastos de Femenino, Sub17 y U24 se llevaban juntos en la hoja KOI; por eso aquí van en un solo renglón.':'';
+}
+const W=el=>Math.max(260,$(el).clientWidth);
+const ticks=(mx,n=4)=>{const p=Math.pow(10,Math.floor(Math.log10(mx||1))),st=[1,2,2.5,5,10].map(x=>x*p).find(x=>mx/x<=n)||p*10;const t=[];for(let v=0;v<=mx+st*.001;v+=st)t.push(v);if(t[t.length-1]<mx)t.push(t[t.length-1]+st);return t;};
+const tip=(t)=>`data-tip="${esc(t)}"`;
+const top4=(x,y,w,h,r=4)=>{r=Math.min(r,w/2,Math.abs(h));if(h<=0)return '';return `M${x},${y+h}V${y+r}Q${x},${y} ${x+r},${y}H${x+w-r}Q${x+w},${y} ${x+w},${y+r}V${y+h}Z`;};
+
+function grouped(el,data,H0){
+  const w=W(el),h=H0,pl=46,pr=6,pt=8,pb=22,iw=w-pl-pr,ih=h-pt-pb;
+  const mx=Math.max(1,...data.map(d=>Math.max(d.i,d.g))),T=ticks(mx),top=T[T.length-1];
+  const step=iw/data.length,bw=Math.min(22,(step-10)/2);
+  const y=v=>pt+ih-(v/top)*ih;
+  let s=T.map(t=>`<line x1="${pl}" x2="${w-pr}" y1="${y(t)}" y2="${y(t)}" stroke="var(--line)"/><text x="${pl-8}" y="${y(t)+3.5}" text-anchor="end" font-size="10" fill="var(--muted)">${fM(t)}</text>`).join('');
+  data.forEach((d,i)=>{const x=pl+i*step+(step-2*bw-2)/2;
+    s+=`<g ${tip(`<b>${d.l}</b><br><span class="sw" style="background:var(--ing)"></span>Ingresos ${fCOP(d.i)}<br><span class="sw" style="background:var(--gas)"></span>Gastos ${fCOP(d.g)}<br>Resultado ${fCOP(d.i-d.g)}`)}>
+      <rect x="${pl+i*step}" y="${pt}" width="${step}" height="${ih}" fill="transparent"/>
+      <path d="${top4(x,y(d.i),bw,pt+ih-y(d.i))}" fill="var(--ing)"/><path d="${top4(x+bw+2,y(d.g),bw,pt+ih-y(d.g))}" fill="var(--gas)"/></g>
+      <text x="${x+bw+1}" y="${h-6}" text-anchor="middle" font-size="10.5" fill="var(--muted)">${d.l}</text>`;});
+  $(el).innerHTML=`<svg viewBox="0 0 ${w} ${h}" role="img" aria-label="Ingresos y gastos">${s}<line x1="${pl}" x2="${w-pr}" y1="${pt+ih}" y2="${pt+ih}" stroke="var(--line2)"/></svg>`;
+}
+
+function diverging(el,data,H0){
+  const w=W(el),h=H0,pl=46,pr=6,pt=12,pb=22,iw=w-pl-pr,ih=h-pt-pb;
+  const mx=Math.max(1,...data.map(d=>Math.abs(d.v)));
+  const z=pt+ih/2,sc=v=>v/mx*(ih/2-4);
+  const step=iw/data.length,bw=Math.min(26,step-8);
+  let s=`<line x1="${pl}" x2="${w-pr}" y1="${z}" y2="${z}" stroke="var(--line2)"/><text x="${pl-8}" y="${z+3.5}" text-anchor="end" font-size="10" fill="var(--muted)">$0</text>`+
+    `<text x="${pl-8}" y="${pt+8}" text-anchor="end" font-size="10" fill="var(--muted)">${fM(mx)}</text><text x="${pl-8}" y="${pt+ih}" text-anchor="end" font-size="10" fill="var(--muted)">${fM(-mx)}</text>`;
+  data.forEach((d,i)=>{const x=pl+i*step+(step-bw)/2,hh=Math.abs(sc(d.v)),pos=d.v>=0,r=Math.min(4,bw/2,hh);
+    const path=pos?top4(x,z-hh,bw,hh):(hh?`M${x},${z}V${z+hh-r}Q${x},${z+hh} ${x+r},${z+hh}H${x+bw-r}Q${x+bw},${z+hh} ${x+bw},${z+hh-r}V${z}Z`:'');
+    s+=`<g ${tip(`<b>${d.l}</b><br>${pos?'Sobró':'Faltó'} ${fCOP(Math.abs(d.v))}`)}><rect x="${pl+i*step}" y="${pt}" width="${step}" height="${ih}" fill="transparent"/><path d="${path}" fill="${pos?'var(--ing)':'var(--gas)'}"/></g>`+
+      `<text x="${x+bw/2}" y="${h-6}" text-anchor="middle" font-size="10.5" fill="var(--muted)">${d.l}</text>`;
+    if(data.length<=10&&hh>0)s+=`<text x="${x+bw/2}" y="${pos?z-hh-5:z+hh+12}" text-anchor="middle" font-size="9.5" fill="var(--soft)">${fM(d.v)}</text>`;});
+  $(el).innerHTML=`<svg viewBox="0 0 ${w} ${h}" role="img" aria-label="Resultado">${s}</svg>`;
+}
+
+function hbars(el,items,color,total,max=6){
+  items=items.filter(x=>x.v>0).sort((a,b)=>b.v-a.v);
+  if(items.length>max){const rest=items.slice(max-1).reduce((s,x)=>s+x.v,0);items=items.slice(0,max-1).concat([{k:'Otros',v:rest}]);}
+  const w=W(el),rh=30,lw=Math.min(170,w*.38),vw=92,h=items.length*rh+4,mx=Math.max(1,...items.map(x=>x.v)),bwMax=w-lw-vw;
+  let s='';
+  items.forEach((x,i)=>{const y=i*rh+4,bw=Math.max(2,x.v/mx*bwMax);
+    s+=`<g ${tip(`<b>${esc(x.k)}</b><br>${fCOP(x.v)} · ${pct(x.v,total)}%`)}><rect x="0" y="${y-2}" width="${w}" height="${rh}" fill="transparent"/>
+      <text x="0" y="${y+15}" font-size="12" fill="var(--soft)">${esc(x.k.length>24?x.k.slice(0,23)+'…':x.k)}</text>
+      <rect x="${lw}" y="${y+4}" width="${bw}" height="14" rx="4" fill="${color}"/>
+      <text x="${w}" y="${y+15}" text-anchor="end" font-size="11.5" fill="var(--text)" font-weight="600">${fM(x.v)} <tspan fill="var(--muted)" font-weight="500">${pct(x.v,total)}%</tspan></text></g>`;});
+  $(el).innerHTML=items.length?`<svg viewBox="0 0 ${w} ${h}" role="img">${s}</svg>`:'<p class="muted" style="padding:20px 0">Sin datos</p>';
+}
+
+function hgrouped(el,items){
+  items=items.filter(x=>x.i||x.g);
+  const w=W(el),rh=40,lw=86,vw=70,h=items.length*rh+4,mx=Math.max(1,...items.map(x=>Math.max(x.i,x.g))),bwMax=w-lw-vw;
+  let s='';
+  items.forEach((x,k)=>{const y=k*rh+4;
+    s+=`<g ${tip(`<b>${esc(x.k)}</b><br><span class="sw" style="background:var(--ing)"></span>Ingresos ${fCOP(x.i)}<br><span class="sw" style="background:var(--gas)"></span>Gastos ${fCOP(x.g)}`)}><rect x="0" y="${y-2}" width="${w}" height="${rh}" fill="transparent"/>
+      <text x="0" y="${y+19}" font-size="12" fill="var(--soft)">${esc(x.k==='FEM + JUVENILES'?'Fem + juv.':nice(x.k))}</text>
+      <rect x="${lw}" y="${y+3}" width="${Math.max(x.i?2:0,x.i/mx*bwMax)}" height="13" rx="4" fill="var(--ing)"/>
+      <rect x="${lw}" y="${y+18}" width="${Math.max(x.g?2:0,x.g/mx*bwMax)}" height="13" rx="4" fill="var(--gas)"/>
+      <text x="${w}" y="${y+14}" text-anchor="end" font-size="11" fill="var(--text)">${fM(x.i)}</text>
+      <text x="${w}" y="${y+29}" text-anchor="end" font-size="11" fill="var(--muted)">${fM(x.g)}</text></g>`;});
+  $(el).innerHTML=items.length?`<svg viewBox="0 0 ${w} ${h}" role="img">${s}</svg>`:'<p class="muted" style="padding:20px 0">Sin datos</p>';
+}
+
+// ── Tooltip ──
+const TIP=$('tip');
+document.addEventListener('pointermove',e=>{
+  const g=e.target.closest&&e.target.closest('[data-tip]');
+  if(!g){TIP.classList.remove('on');return;}
+  TIP.innerHTML=g.getAttribute('data-tip');TIP.classList.add('on');
+  const r=TIP.getBoundingClientRect();let x=e.clientX+14,y=e.clientY+14;
+  if(x+r.width>innerWidth-8)x=e.clientX-r.width-14;if(y+r.height>innerHeight-8)y=e.clientY-r.height-14;
+  TIP.style.left=x+'px';TIP.style.top=y+'px';
+});
+document.addEventListener('pointerleave',()=>TIP.classList.remove('on'));
+let rz;addEventListener('resize',()=>{clearTimeout(rz);rz=setTimeout(()=>H&&draw(),150);});
+
+// ══════════════════════════════════════════════════════════════
+// DEMO (?demo): números inventados, solo para ver el diseño
+// ══════════════════════════════════════════════════════════════
+function demoApi(p){
+  const rnd=(i,a,b)=>a+((i*9301+49297)%233280)/233280*(b-a);
+  if(p.action==='adminHistorico'){
+    const anios=[2019,2021,2022,2023,2024,2025,2026].map((anio,k)=>{
+      const meses=MES.map((m,i)=>({mes:i+1,ingresos:Math.round(rnd(k*12+i,2e6,9e6)),gastos:Math.round(rnd(k*12+i+7,2e6,9e6))}));
+      const ingresos=meses.reduce((s,m)=>s+m.ingresos,0),gastos=meses.reduce((s,m)=>s+m.gastos,0),jugadores=Math.round(rnd(k,60,90));
+      const parts=(t,keys)=>Object.fromEntries(keys.map((x,i)=>[x,Math.round(t*[.38,.24,.16,.1,.07,.05][i])]));
+      return{anio,ingresos,gastos,resultado:ingresos-gastos,jugadores,porJugador:Math.round(ingresos/jugadores),meses,
+        porTipo:parts(ingresos,['Mensualidad','Torneo','Proceso internacional','Uniformes','Afiliación / club','Sanción']),
+        porGasto:parts(gastos,['TORNEOS PLAYER FEE','ENTRENADORES','CANCHAS','UNIFORMES','POLIZAS Y AFILIACIONES','OTROS']),
+        porCat:parts(ingresos,['OPEN','FEMENINO','SUB17','U24','MASTER','DISCGOLF']),porCatG:parts(gastos,['OPEN','FEMENINO','SUB17','U24','MASTER','DISCGOLF'])};});
+    const tot={ingresos:anios.reduce((s,a)=>s+a.ingresos,0),gastos:anios.reduce((s,a)=>s+a.gastos,0)};
+    return Promise.resolve({ok:true,anios,total:Object.assign(tot,{gastos_top:[{k:'TORNEOS PLAYER FEE',v:tot.gastos*.38}],ingresos_top:[{k:'Mensualidad',v:tot.ingresos*.38}]})});
+  }
+  return Promise.resolve({ok:true,totales:{cajaAcumulada:3500000,cajaCorte:'2025-12-31'},cxp:[{proveedor:'Proveedor A',concepto:'Team fee',fechaLimite:'2026-11-06',valorTotal:4000000,recogido:1200000,pagado:1000000,saldo:3000000,estado:'PENDIENTE'}]});
+}
+
+boot();
+</script>
+</body>
+</html>

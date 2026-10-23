@@ -1,5 +1,5 @@
 // ══════════════════════════════════════════════════════════════
-// EUFORIA PORTAL — API ADMINISTRATIVA v1.3
+// EUFORIA PORTAL — API ADMINISTRATIVA v1.6
 //   Archivo aparte dentro del MISMO proyecto de Apps Script que portal-api.gs
 //   (usa su login, token, findUser_, withLock_ y str_).
 //   Lee y escribe el Sheet "2027 EUFORIA CUENTAS GENERALES" (fuente nueva).
@@ -24,6 +24,9 @@ const ADMIN = {
   TZ: 'America/Bogota',
   LIST_LIMIT: 500,
   DIAS_GRACIA: 0,     // días después de "Vence" antes de contar como mora
+  // Caja = saldo oficial a una fecha de corte + todo lo que entra y sale después.
+  // Saldo al 31-dic-2025 según "Resumen Euforia + KOI" del Excel 2026.
+  CAJA_INICIAL: { fecha: '2025-12-31', valor: 983827 },
 };
 
 // Tablas del Sheet. Los nombres de columna se buscan sin tildes ni mayúsculas,
@@ -99,7 +102,7 @@ const ADM_REFS = {
 };
 
 const ADMIN_ROUTES = {
-  adminPing:      p => ({ ok: true, message: 'Euforia admin v1.3 ✓' }),
+  adminPing:      p => ({ ok: true, message: 'Euforia admin v1.6 ✓' }),
   adminCheck:     p => admGuard_(p, u => ({ ok: true, codigo: u.codigo, nombre: u.nombre })),
   adminCatalogos: p => admGuard_(p, u => admCached_('cat', {}, () => adminCatalogos_())),
   adminList:      p => admGuard_(p, u => adminList_(p)),
@@ -108,6 +111,7 @@ const ADMIN_ROUTES = {
   adminSaldos:    p => admGuard_(p, u => admCached_('sal', { anio: p.anio, idJug: p.idJug, todos: p.todos }, () => adminSaldos_(p))),
   adminResumen:   p => admGuard_(p, u => admCached_('res', { anio: p.anio }, () => adminResumen_(p))),
   adminSyncAll:   p => admGuard_(p, u => withLock_(() => ({ ok: true, log: adminSync() }))),
+  adminHistorico: p => admGuard_(p, u => admCached_('hist', {}, () => adminHistorico_())),
 };
 
 // ══════════════════════════════════════════════════════════════
@@ -638,9 +642,10 @@ function adminResumen_(p) {
   let ing = 0, gas = 0, cajaIng = 0, cajaGas = 0;
   const conc = id => (porConc[id] = porConc[id] || { idConc: id, concepto: (ix.conc.byId[id] || {}).concepto || id, ingresos: 0, gastos: 0 });
 
+  const corte = ADMIN.CAJA_INICIAL.fecha;
   pagos.forEach(r => {
     const v = admNum_(r.valor);
-    cajaIng += v;
+    if (str_(r.fecha).slice(0, 10) > corte) cajaIng += v;
     if (str_(r.fecha).slice(0, 4) !== anio) return;
     ing += v;
     mesIng[Number(str_(r.fecha).slice(5, 7)) - 1] += v;
@@ -650,7 +655,7 @@ function adminResumen_(p) {
   });
   gastos.forEach(r => {
     const v = admNum_(r.valor);
-    cajaGas += v;
+    if (str_(r.fecha).slice(0, 10) > corte) cajaGas += v;
     if (str_(r.fecha).slice(0, 4) !== anio) return;
     gas += v;
     mesGas[Number(str_(r.fecha).slice(5, 7)) - 1] += v;
@@ -665,11 +670,68 @@ function adminResumen_(p) {
     .sort((a, b) => b.ingresos + b.gastos - a.ingresos - a.gastos);
   return {
     ok: true, anio: Number(anio),
-    totales: { ingresos: ing, gastos: gas, resultado: ing - gas, cajaAcumulada: cajaIng - cajaGas },
+    totales: { ingresos: ing, gastos: gas, resultado: ing - gas,
+               cajaAcumulada: ADMIN.CAJA_INICIAL.valor + cajaIng - cajaGas, cajaCorte: corte, cajaInicial: ADMIN.CAJA_INICIAL.valor },
     meses: mesIng.map((v, i) => ({ mes: i + 1, ingresos: v, gastos: mesGas[i] })),
     conceptos, tipos: Object.values(porTipo).sort((a, b) => b.gastos - a.gastos),
     categorias: Object.values(porCat), cxp: admCxpEstado_(pagos, gastos),
   };
+}
+
+// ══════════════════════════════════════════════════════════════
+// HISTÓRICO por año: ingresos, gastos, jugadores que pagaron, de dónde entra y en qué se va
+// ══════════════════════════════════════════════════════════════
+// "CANCHAS OPEN" → "CANCHAS"; "ENTRENADOR DISC GOLF" → "ENTRENADORES"
+function admTipoBase_(t) {
+  const k = str_(t).toUpperCase().replace(/\s+(OPEN|FEM|U24|U17|MASTER|DISC GOLF|KOI)$/, '');
+  if (k === 'ESPACIOS DISCGOLF') return 'CANCHAS';
+  if (k === 'ENTRENADOR DISC GOLF') return 'ENTRENADORES';
+  return k || 'SIN TIPO';
+}
+function adminHistorico_() {
+  const pagos = admLoad_('pagos').rows, gastos = admLoad_('gastos').rows;
+  const Y = {};
+  const y = f => {
+    const a = str_(f).slice(0, 4);
+    return (Y[a] = Y[a] || { anio: Number(a), ingresos: 0, gastos: 0, jug: {}, porTipo: {}, porGasto: {}, porCat: {}, porCatG: {},
+                             mi: Array(12).fill(0), mg: Array(12).fill(0) });
+  };
+  const add = (o, k, v) => { o[k] = (o[k] || 0) + v; };
+  pagos.forEach(r => {
+    const v = admNum_(r.valor); if (!str_(r.fecha)) return;
+    const a = y(r.fecha);
+    a.ingresos += v;
+    if (v > 0 && str_(r.idJug)) a.jug[r.idJug] = true;
+    add(a.porTipo, str_(r.tipo) || 'Otros', v);
+    add(a.porCat, str_(r.categoria) || 'SIN CATEGORÍA', v);
+    a.mi[Number(str_(r.fecha).slice(5, 7)) - 1] += v;
+  });
+  gastos.forEach(r => {
+    const v = admNum_(r.valor); if (!str_(r.fecha)) return;
+    const a = y(r.fecha);
+    a.gastos += v;
+    add(a.porGasto, admTipoBase_(r.proveedor), v);
+    add(a.porCatG, str_(r.categoria) || 'SIN CATEGORÍA', v);
+    a.mg[Number(str_(r.fecha).slice(5, 7)) - 1] += v;
+  });
+  const top = (o, n) => Object.keys(o).map(k => ({ k, v: o[k] })).sort((a, b) => b.v - a.v).slice(0, n);
+  const anios = Object.values(Y).filter(a => a.anio).sort((a, b) => a.anio - b.anio).map(a => {
+    const jugadores = Object.keys(a.jug).length;
+    return { anio: a.anio, ingresos: a.ingresos, gastos: a.gastos, resultado: a.ingresos - a.gastos, jugadores,
+             porJugador: jugadores ? Math.round(a.ingresos / jugadores) : 0,
+             mensualidades: a.porTipo['Mensualidad'] || 0,
+             ingresos_top: top(a.porTipo, 4), gastos_top: top(a.porGasto, 4), categorias: top(a.porCat, 8),
+             porTipo: a.porTipo, porGasto: a.porGasto, porCat: a.porCat, porCatG: a.porCatG,
+             meses: a.mi.map((v, i) => ({ mes: i + 1, ingresos: v, gastos: a.mg[i] })) };
+  });
+  const tot = { ingresos: 0, gastos: 0, porGasto: {}, porTipo: {} };
+  Object.values(Y).forEach(a => {
+    tot.ingresos += a.ingresos; tot.gastos += a.gastos;
+    Object.keys(a.porGasto).forEach(k => add(tot.porGasto, k, a.porGasto[k]));
+    Object.keys(a.porTipo).forEach(k => add(tot.porTipo, k, a.porTipo[k]));
+  });
+  return { ok: true, anios, total: { ingresos: tot.ingresos, gastos: tot.gastos,
+           gastos_top: top(tot.porGasto, 5), ingresos_top: top(tot.porTipo, 5) } };
 }
 
 // recogido = pagos del concepto que la financia; pagado = gastos marcados con su ID CXP

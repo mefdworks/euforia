@@ -118,7 +118,7 @@ select.inp:disabled{opacity:.6;cursor:default}
 // El token del portal del jugador sirve aquí porque el secreto es del proyecto.
 // ══════════════════════════════════════════════════════════════
 const API='https://script.google.com/macros/s/AKfycbwFAw2hDftEJYievRc5-HpbAsL0IMxLjMP14TbwczTkZkKch5ZAG2aGuCoKawYR0GAM/exec';
-const VERSION='admin v1.2';
+const VERSION='admin v1.5';
 const DEMO=new URLSearchParams(location.search).has('demo');
 const CATS=['OPEN','FEMENINO','U24','SUB17','MASTER','DISCGOLF'];
 
@@ -313,7 +313,7 @@ async function renderInicio(){
     const t=r.totales,mx=Math.max(1,...r.meses.map(m=>Math.max(m.ingresos,m.gastos)));
     const W=320,H=120,bw=9;
     const bars=r.meses.map((m,i)=>{const x=10+i*25.5,hi=m.ingresos/mx*(H-18),hg=m.gastos/mx*(H-18);
-      return `<rect x="${x}" y="${H-14-hi}" width="${bw}" height="${hi}" rx="2" style="fill:var(--ok)"><title>${MES[i]} ingresos ${fCOP(m.ingresos)}</title></rect>`+
+      return `<rect x="${x}" y="${H-14-hi}" width="${bw}" height="${hi}" rx="2" style="fill:#5b8cff"><title>${MES[i]} ingresos ${fCOP(m.ingresos)}</title></rect>`+
              `<rect x="${x+bw+1}" y="${H-14-hg}" width="${bw}" height="${hg}" rx="2" style="fill:var(--red2)"><title>${MES[i]} gastos ${fCOP(m.gastos)}</title></rect>`+
              `<text x="${x+bw}" y="${H-2}" text-anchor="middle" style="fill:var(--muted);font:600 8px Barlow">${MES[i][0]}</text>`;}).join('');
     const cxp=(r.cxp||[]).filter(c=>c.estado!=='PAGADA');
@@ -321,7 +321,7 @@ async function renderInicio(){
     const tipos=(r.tipos||[]).slice(0,6),mt=Math.max(1,...tipos.map(x=>x.gastos));
     const mora=s.ok?s.totales:{enMora:0,saldoVencido:0};
     v.innerHTML=`<div class="page-h"><h2>Cuentas</h2><small>Resumen del club por año</small></div>${yearChips(ST.anioR,'setAnioR')}
-      <div class="card big" style="margin-top:14px"><div class="cap">Caja acumulada</div><div class="v">${fCOP(t.cajaAcumulada)}</div><div class="s">Todo lo que ha entrado menos todo lo que ha salido</div></div>
+      <div class="card big" style="margin-top:14px"><div class="cap">Caja acumulada</div><div class="v">${fCOP(t.cajaAcumulada)}</div><div class="s">${t.cajaCorte?`Saldo oficial al ${fFecha(t.cajaCorte)} (${fCOP(t.cajaInicial)}) más lo que ha entrado y salido después`:'Todo lo que ha entrado menos todo lo que ha salido'}</div></div>
       <div class="kp">
         <div><small>Ingresos ${r.anio}</small><b class="sm">${fCOP(t.ingresos)}</b></div>
         <div><small>Gastos ${r.anio}</small><b class="sm">${fCOP(t.gastos)}</b></div>
@@ -330,15 +330,56 @@ async function renderInicio(){
       ${mora.enMora?`<button class="card alert" onclick="ST.salF='mora';go('saldos')"><span class="dot due">!</span><span class="tx"><b>${mora.enMora} en mora · ${fCOP(mora.saldoVencido)}</b><small>Cobros ${ST.anioS} ya vencidos sin pagar</small></span>${ic('chev','i chev')}</button>`:''}
       <div class="sec"><div class="sec-h"><span class="cap">Mes a mes ${r.anio}</span></div>
         <div class="card chart"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Ingresos y gastos por mes">${bars}</svg>
-        <div class="leg"><span><i style="background:var(--ok)"></i>Ingresos</span><span><i style="background:var(--red2)"></i>Gastos</span></div></div></div>
+        <div class="leg"><span><i style="background:#5b8cff"></i>Ingresos</span><span><i style="background:var(--red2)"></i>Gastos</span></div></div></div>
       <div class="sec"><div class="sec-h"><span class="cap">Cuentas por pagar</span><button onclick="openCat('cxp')">Ver todas</button></div>
         <div class="card rows">${cxp.length?cxp.map(c=>`<button class="row tap" onclick="editCxp('${esc(c.id)}')"><div class="dot ${c.estado==='VENCIDA'?'due':'gift'}">${c.estado==='VENCIDA'?'!':'$'}</div><div class="nm"><b>${esc(c.proveedor)} · ${esc(c.concepto)}</b><small>${c.fechaLimite?'Vence '+fFecha(c.fechaLimite):'Sin fecha'} · pagado ${fCOP(c.pagado)}</small></div><div class="amt ${c.estado==='VENCIDA'?'due':''}">${fCOP(c.saldo)}<small>${esc(c.estado.toLowerCase())}</small></div></button>`).join(''):'<div class="empty">No hay cuentas pendientes</div>'}</div></div>
+      <div class="sec" id="hist-sec"><div class="sec-h"><span class="cap">Histórico</span></div>${sk(240)}</div>
       <div class="sec"><div class="sec-h"><span class="cap">Bolsas ${r.anio}</span></div>
         <div class="card rows">${conc.length?conc.map(c=>`<div class="row"><div class="nm"><b>${esc(c.concepto)}</b><small>Entró ${fCOP(c.ingresos)} · salió ${fCOP(c.gastos)}</small></div><div class="amt ${c.resultado<0?'due':''}">${fCOP(c.resultado)}</div></div>`).join(''):'<div class="empty">Sin movimientos este año</div>'}</div></div>
       ${tipos.length?`<div class="sec"><div class="sec-h"><span class="cap">En qué se gastó</span></div><div class="card hb">${tipos.map(x=>`<div class="l"><span>${esc(x.tipo)}</span><b>${fCOP(x.gastos)}</b></div><div class="bar"><i data-w="${Math.round(x.gastos/mt*100)}"></i></div>`).join('')}</div></div>`:''}
       <div class="stamp"><button onclick="renderInicio()" aria-label="Actualizar">${ic('refresh')}</button>Datos del Sheet de cuentas</div>`;
     animateBars('v-inicio');
+    renderHistorico();
   }catch(e){v.innerHTML+=`<div class="card empty">${esc(e.message||NET_ERR)}</div>`;}
+}
+
+// ── Histórico: lectura corta de todos los años ──
+const fM=n=>{const a=Math.abs(n),s=n<0?'−':'';return a>=1e6?s+'$'+(a/1e6).toLocaleString('es-CO',{maximumFractionDigits:1})+'M':s+fCOP(a);};
+const pct=(a,b)=>b?Math.round(a/b*100):0;
+async function renderHistorico(){
+  const box=$('hist-sec');if(!box)return;
+  try{
+    const h=await adm('adminHistorico');
+    if(!h.ok||!h.anios.length){box.remove();return;}
+    const A=h.anios,T=h.total,ult=A[A.length-1],ant=A[A.length-2];
+    const best=A.reduce((a,b)=>b.resultado>a.resultado?b:a),worst=A.reduce((a,b)=>b.resultado<a.resultado?b:a);
+    const gTot=T.gastos||1,iTot=T.ingresos||1;
+    const torneos=T.gastos_top.filter(x=>/^TORNEOS/.test(x.k)).reduce((s,x)=>s+x.v,0);
+    const otrosG=T.gastos_top.filter(x=>!/^TORNEOS/.test(x.k)).slice(0,2);
+    const mens=(T.ingresos_top.find(x=>x.k==='Mensualidad')||{v:0}).v;
+    const huecos=[];for(let y=A[0].anio;y<=ult.anio;y++)if(!A.some(a=>a.anio===y))huecos.push(y);
+    const notas=[
+      `De ${A[0].anio} a ${ult.anio} entraron <b>${fM(T.ingresos)}</b> y salieron <b>${fM(T.gastos)}</b>: el club gasta casi todo lo que recoge (${T.ingresos-T.gastos>=0?'+':''}${fM(T.ingresos-T.gastos)} en total).`,
+      `Mejor año: <b>${best.anio}</b> (${fM(best.resultado)}). Más difícil: <b>${worst.anio}</b> (${fM(worst.resultado)}).`,
+      ant&&ant.porJugador?`En ${ult.anio} cada jugador aportó en promedio <b>${fCOP(ult.porJugador)}</b>, ${ult.porJugador>=ant.porJugador?'+':''}${pct(ult.porJugador-ant.porJugador,ant.porJugador)}% frente a ${ant.anio}. Pagaron ${ult.jugadores} jugadores.`:'',
+      `Las mensualidades son el <b>${pct(mens,iTot)}%</b> de lo que entra; lo demás son torneos, procesos internacionales y uniformes, que entran y salen casi iguales.`,
+      `En qué se va la plata: torneos <b>${pct(torneos,gTot)}%</b>${otrosG.map(x=>`, ${x.k.toLowerCase()} <b>${pct(x.v,gTot)}%</b>`).join('')}.`,
+      huecos.length?`Sin registro de ${huecos.join(', ')}.`:'',
+    ].filter(Boolean);
+    const W=320,H=130,n=A.length,step=(W-20)/n,bw=Math.min(14,step/2-2),mx=Math.max(1,...A.map(a=>Math.max(a.ingresos,a.gastos)));
+    const bars=A.map((a,i)=>{const x=10+i*step+(step-2*bw-2)/2,hi=a.ingresos/mx*(H-22),hg=a.gastos/mx*(H-22);
+      return `<rect x="${x}" y="${H-16-hi}" width="${bw}" height="${hi}" rx="2" style="fill:#5b8cff"><title>${a.anio} ingresos ${fCOP(a.ingresos)}</title></rect>`+
+             `<rect x="${x+bw+2}" y="${H-16-hg}" width="${bw}" height="${hg}" rx="2" style="fill:var(--red2)"><title>${a.anio} gastos ${fCOP(a.gastos)}</title></rect>`+
+             `<text x="${x+bw+1}" y="${H-3}" text-anchor="middle" style="fill:var(--muted);font:600 8.5px Barlow">${String(a.anio).slice(2)}</text>`;}).join('');
+    box.innerHTML=`<div class="sec-h"><span class="cap">Histórico ${A[0].anio}–${ult.anio}</span></div>
+      <div class="card" style="padding:16px 18px"><ul style="list-style:none;display:flex;flex-direction:column;gap:10px;font-size:.88rem;line-height:1.45;color:var(--soft)">${notas.map(t=>`<li style="display:flex;gap:10px"><span style="color:var(--red2)">•</span><span>${t}</span></li>`).join('')}</ul></div>
+      <div class="card chart" style="margin-top:12px"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Ingresos y gastos por año">${bars}</svg>
+        <div class="leg"><span><i style="background:#5b8cff"></i>Ingresos</span><span><i style="background:var(--red2)"></i>Gastos</span></div></div>
+      <div class="card" style="margin-top:12px">
+        <div class="trow h" style="grid-template-columns:44px 1fr 1fr 74px">${['Año','Jugadores','Ingresos','Resultado'].map((x,i)=>`<span style="font:600 .62rem Barlow;letter-spacing:1.5px;text-align:${i?'right':'left'}">${x}</span>`).join('')}</div>
+        ${A.slice().reverse().map(a=>`<div class="trow" style="grid-template-columns:44px 1fr 1fr 74px"><b>${a.anio}</b><span>${a.jugadores}</span><span>${fM(a.ingresos)}</span><span class="${a.resultado<0?'r':'g'}">${fM(a.resultado)}</span></div>`).join('')}
+      </div>`;
+  }catch(e){box.innerHTML=`<div class="sec-h"><span class="cap">Histórico</span></div><div class="card empty">${esc(e.message||NET_ERR)}</div>`;}
 }
 function animateBars(id){requestAnimationFrame(()=>requestAnimationFrame(()=>$(id).querySelectorAll('.bar i').forEach(b=>b.style.width=b.dataset.w+'%')));}
 
@@ -563,6 +604,7 @@ function renderMas(){
     <div class="sec"><span class="cap">Movimientos</span><div class="card menu" style="margin-top:12px">
       ${m('p','list','Pagos y gastos','Buscar, editar o borrar registros',"ST.movJug='';go('mov')")}
       ${m('c','doc','Cuentas por pagar','Proveedores, saldos y vencimientos',"openCat('cxp')")}
+      <a href="tablero-cuentas.html"><span class="ic">${ic('list')}</span><span class="tx"><b>Tablero de cuentas</b><small>Histórico, gráficas y análisis en pantalla grande</small></span>${ic('chev','i chev')}</a>
       ${m('s','refresh','Recalcular todo','Estado, pagado y debe de cada jugador y saldos de CXP',"syncAll(this)")}
     </div></div>
     <div class="sec"><span class="cap">Catálogos</span><div class="card menu" style="margin-top:12px">
@@ -739,7 +781,7 @@ function demoApi(p){
     case 'adminCatalogos':return ok({jugadores:D.jug,conceptos:D.conc,tiposGasto:D.tipos,categorias:CATS.concat('CLUB').map(id=>({id,activo:'SI'})),
       listas:{'Medio de pago':['Efectivo','Transferencia','Exoneración'],'Tipo de concepto':['Afiliación / club','Mensualidad','Torneo','Uniformes','General'],'Ámbito':['CLUB','LÍNEA'],'Clase de gasto':['Administrativo','Deportivo']}});
     case 'adminList':{const rows=p.tabla==='cxp'?D.cxp:(p.tabla==='gastos'?D.gastos:D.pagos.filter(r=>!p.idJug||r.idJug===p.idJug));return ok({rows,total:rows.length,suma:rows.reduce((s,r)=>s+(r.valor||r.valorTotal||0),0)});}
-    case 'adminResumen':return ok({anio:Number(p.anio),totales:{ingresos:41250000,gastos:36980000,resultado:4270000,cajaAcumulada:3556562},
+    case 'adminResumen':return ok({anio:Number(p.anio),totales:{ingresos:41250000,gastos:36980000,resultado:4270000,cajaAcumulada:3556562,cajaCorte:'2025-12-31',cajaInicial:983827},
       meses:MES.map((m,i)=>({mes:i+1,ingresos:i<10?2600000+((i*7919)%1400000):0,gastos:i<10?2300000+((i*6151)%1600000):0})),
       conceptos:[{concepto:'Mensualidad Ene 2027',ingresos:3630000,gastos:4220336,resultado:-590336},{concepto:'Nacionales 2027',ingresos:4240000,gastos:4390000,resultado:-150000},{concepto:'Uniformes 2027',ingresos:799000,gastos:792000,resultado:7000}],
       tipos:[{tipo:'ENTRENADORES OPEN',gastos:10255000},{tipo:'CANCHAS OPEN',gastos:8696488},{tipo:'TORNEOS PLAYER FEE',gastos:6140000},{tipo:'PLAN FÍSICO',gastos:1000000}],cxp:D.cxp});
@@ -749,6 +791,9 @@ function demoApi(p){
       const js=D.jug.filter(j=>!p.idJug||j.id===p.idJug).map(j=>{const it=items(j),sv=it.filter(i=>i.vencido).reduce((s,i)=>s+i.saldo,0);
         return{idJug:j.id,codigo:j.codigo,nombre:j.nombre,categorias:[j.categoria],estadoAuto:sv?'MORA':'AL DÍA',estadoManual:'',cobroAnio:it.reduce((s,i)=>s+i.tarifa,0),pagado:it.reduce((s,i)=>s+i.pagado,0),saldoAnio:it.reduce((s,i)=>s+i.saldo,0),saldoVencido:sv,estado:sv?'MORA':'AL DÍA',items:p.idJug?it:undefined};});
       return ok({anio:2027,jugadores:js,totales:{enMora:js.filter(j=>j.estado==='MORA').length,saldoVencido:js.reduce((s,j)=>s+j.saldoVencido,0),saldoAnio:js.reduce((s,j)=>s+j.saldoAnio,0)}});}
+    case 'adminHistorico':{const A=[[2019,57514250,60273284,81,10038500],[2021,51847700,46377619,81,17092500],[2022,134501500,134085133,72,28781000],[2023,78331009,81940159,77,42304899],[2024,83449070,82670467,77,44547070],[2025,88708290,88027155,82,46525100],[2026,133722450,131149716,87,44821650]]
+      .map(([anio,ingresos,gastos,jugadores,mensualidades])=>({anio,ingresos,gastos,resultado:ingresos-gastos,jugadores,porJugador:Math.round(ingresos/jugadores),mensualidades}));
+      return ok({anios:A,total:{ingresos:628074269,gastos:624523533,gastos_top:[{k:'TORNEOS PLAYER FEE',v:154779832},{k:'TORNEOS TEAM FEE',v:114106629},{k:'ENTRENADORES',v:103138700},{k:'UNIFORMES',v:70823704},{k:'CANCHAS',v:68619758}],ingresos_top:[{k:'Mensualidad',v:234110719},{k:'Torneo',v:168733900}]}});}
     case 'adminSave':return ok({id:p.data.id||(p.tabla==='pagos'?'PG005399':'GS000880')});
     case 'adminDelete':return ok({});
   }
